@@ -8,6 +8,10 @@ build_property.PlatformNeutralAssembly =
 build_property.EnforceExtendedAnalyzerRules = 
 build_property._SupportedPlatformList = Linux,macOS,Windows
 build_property.RootNamespace = ConsoleApp1
+<<<<<<< HEAD
+build_property.ProjectDir = C:\Users\ASUS\OneDrive\Рабочий стол\test2\creating\ConsoleApp1\
+=======
 build_property.ProjectDir = C:\Users\ASUS\OneDrive\Рабочий стол\test1\creating\ConsoleApp1\
+>>>>>>> 54519cfee839f36439efeedf48b3e5ee687ada64
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = 

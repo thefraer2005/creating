@@ -1,10 +1,18 @@
 {
   "Version": 1,
+<<<<<<< HEAD
+  "WorkspaceRootPath": "C:\\Users\\ASUS\\OneDrive\\\u0420\u0430\u0431\u043E\u0447\u0438\u0439 \u0441\u0442\u043E\u043B\\test2\\creating\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{9C4259C6-643C-41AC-A7B8-05932E851DB7}|ConsoleApp1\\ConsoleApp1.csproj|c:\\users\\asus\\onedrive\\\u0440\u0430\u0431\u043E\u0447\u0438\u0439 \u0441\u0442\u043E\u043B\\test2\\creating\\consoleapp1\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{9C4259C6-643C-41AC-A7B8-05932E851DB7}|ConsoleApp1\\ConsoleApp1.csproj|solutionrelative:consoleapp1\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+=======
   "WorkspaceRootPath": "C:\\Users\\ASUS\\OneDrive\\\u0420\u0430\u0431\u043E\u0447\u0438\u0439 \u0441\u0442\u043E\u043B\\test1\\creating\\",
   "Documents": [
     {
       "AbsoluteMoniker": "D:0:0:{79FDA7B1-5546-4948-8D7A-95CABCE3D534}|ConsoleApp1\\ConsoleApp1.csproj|c:\\users\\asus\\onedrive\\\u0440\u0430\u0431\u043E\u0447\u0438\u0439 \u0441\u0442\u043E\u043B\\test1\\creating\\consoleapp1\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{79FDA7B1-5546-4948-8D7A-95CABCE3D534}|ConsoleApp1\\ConsoleApp1.csproj|solutionrelative:consoleapp1\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+>>>>>>> 54519cfee839f36439efeedf48b3e5ee687ada64
     }
   ],
   "DocumentGroupContainers": [
@@ -32,6 +40,15 @@
               "$type": "Document",
               "DocumentIndex": 0,
               "Title": "Program.cs",
+<<<<<<< HEAD
+              "DocumentMoniker": "C:\\Users\\ASUS\\OneDrive\\\u0420\u0430\u0431\u043E\u0447\u0438\u0439 \u0441\u0442\u043E\u043B\\test2\\creating\\ConsoleApp1\\Program.cs",
+              "RelativeDocumentMoniker": "ConsoleApp1\\Program.cs",
+              "ToolTip": "C:\\Users\\ASUS\\OneDrive\\\u0420\u0430\u0431\u043E\u0447\u0438\u0439 \u0441\u0442\u043E\u043B\\test2\\creating\\ConsoleApp1\\Program.cs",
+              "RelativeToolTip": "ConsoleApp1\\Program.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-01-20T03:42:58.391Z",
+=======
               "DocumentMoniker": "C:\\Users\\ASUS\\OneDrive\\\u0420\u0430\u0431\u043E\u0447\u0438\u0439 \u0441\u0442\u043E\u043B\\test1\\creating\\ConsoleApp1\\Program.cs",
               "RelativeDocumentMoniker": "ConsoleApp1\\Program.cs",
               "ToolTip": "C:\\Users\\ASUS\\OneDrive\\\u0420\u0430\u0431\u043E\u0447\u0438\u0439 \u0441\u0442\u043E\u043B\\test1\\creating\\ConsoleApp1\\Program.cs",
@@ -39,6 +56,7 @@
               "ViewState": "AQIAAAAAAAAAAAAAAAAAAAIAAAAJAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-01-20T03:41:36.567Z",
+>>>>>>> 54519cfee839f36439efeedf48b3e5ee687ada64
               "EditorCaption": ""
             },
             {
