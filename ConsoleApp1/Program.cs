@@ -1,6 +1,6 @@
 <<<<<<< HEAD
 ﻿// See https://aka.ms/new-console-template for more information
-Console.WriteLine("by, World!");
+Console.WriteLine("by, mother!");
 =======
 ﻿//1
 //2
