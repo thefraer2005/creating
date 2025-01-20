@@ -14,11 +14,19 @@
   "project": {
     "version": "1.0.0",
     "restore": {
+<<<<<<< HEAD
       "projectUniqueName": "C:\\Users\\ASUS\\OneDrive\\Рабочий стол\\test2\\creating\\ConsoleApp1\\ConsoleApp1.csproj",
       "projectName": "ConsoleApp1",
       "projectPath": "C:\\Users\\ASUS\\OneDrive\\Рабочий стол\\test2\\creating\\ConsoleApp1\\ConsoleApp1.csproj",
       "packagesPath": "C:\\Users\\ASUS\\.nuget\\packages\\",
       "outputPath": "C:\\Users\\ASUS\\OneDrive\\Рабочий стол\\test2\\creating\\ConsoleApp1\\obj\\",
+=======
+      "projectUniqueName": "C:\\Users\\ASUS\\OneDrive\\Рабочий стол\\test1\\creating\\ConsoleApp1\\ConsoleApp1.csproj",
+      "projectName": "ConsoleApp1",
+      "projectPath": "C:\\Users\\ASUS\\OneDrive\\Рабочий стол\\test1\\creating\\ConsoleApp1\\ConsoleApp1.csproj",
+      "packagesPath": "C:\\Users\\ASUS\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\ASUS\\OneDrive\\Рабочий стол\\test1\\creating\\ConsoleApp1\\obj\\",
+>>>>>>> 54519cfee839f36439efeedf48b3e5ee687ada64
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

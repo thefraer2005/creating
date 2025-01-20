@@ -1,8 +1,14 @@
 {
   "version": 2,
+<<<<<<< HEAD
   "dgSpecHash": "yUTtmRusQJY=",
   "success": true,
   "projectFilePath": "C:\\Users\\ASUS\\OneDrive\\Рабочий стол\\test2\\creating\\ConsoleApp1\\ConsoleApp1.csproj",
+=======
+  "dgSpecHash": "5m1S/v+085Y=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\ASUS\\OneDrive\\Рабочий стол\\test1\\creating\\ConsoleApp1\\ConsoleApp1.csproj",
+>>>>>>> 54519cfee839f36439efeedf48b3e5ee687ada64
   "expectedPackageFiles": [],
   "logs": []
 }
