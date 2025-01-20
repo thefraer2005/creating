@@ -1,6 +1,6 @@
 <<<<<<< HEAD
 ﻿// See https://aka.ms/new-console-template for more information
-Console.WriteLine("Hello, World!");
+Console.WriteLine("by, World!");
 =======
 ﻿//1
 //2
