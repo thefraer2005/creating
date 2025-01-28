@@ -9,50 +9,46 @@ using System.Threading;
 
 namespace Client1
 {
+    using static Package11207Helper;
+
     public class GameClient
     {
         private Socket clientSocket;
         public event Action<byte[]> OnGameStarted;
+   
         public event Action<byte[]> UpdateGame;
         public event Action<byte[]> onVictory;
         public event Action<byte[]> endRound;
+        public event Action<byte[]> Error;
         public event Action<string> UnoAction;
 
 
-        public void Connect(string ipAddress)
+        public async Task Connect(string ipAddress)
         {
-            clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            clientSocket.Connect(IPAddress.Parse(ipAddress), 12345);
-
-            Thread receiveThread = new Thread(ReceiveMessages);
-            receiveThread.IsBackground = true;
-            receiveThread.Start();
+            try
+            {
+                clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                await clientSocket.ConnectAsync(IPAddress.Parse(ipAddress), 5000);
+                await ReceiveMessages();
+            }
+            catch (SocketException ex)
+            {
+                MessageBox.Show($"Ошибка подключения: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Общая ошибка: {ex.Message}");
+            }
         }
 
-        private void ReceiveMessages()
+
+        private async Task ReceiveMessages()
         {
             while (true)
             {
                 try
                 {
-                    byte[] buffer = new byte[3024];
-                    int bytesRead = clientSocket.Receive(buffer);
-
-
-
-
-
-
-                    if (bytesRead == 0)
-                    {
-                        MessageBox.Show("Получен пустой пакет (0 байт). Завершение работы.");
-                        break;
-                    }
-
-                    var packet = Packet.FromBytes(buffer.Take(bytesRead).ToArray());
-
-
-                    ProcessMessage(packet);
+                    await GetResponse(clientSocket);
                 }
                 catch (Exception ex)
                 {
@@ -62,57 +58,126 @@ namespace Client1
             }
         }
 
-
-
-
-
-        private void ProcessMessage(Packet packet)
+        public async Task GetResponse(Socket socket)
         {
+            var buffer = new byte[MaxPacketSize];
+            var responseContent = new List<byte>();
+            UnoCommand command;
+            int contentLength;
+            do
+            {
+                contentLength = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), SocketFlags.None);
+                command = GetCommand(buffer[Command]);
 
-            switch (packet.Command)
+
+
+                responseContent.AddRange(GetContent(buffer, contentLength));
+
+            } while (!IsFull(buffer[Fullness]));
+            switch (command)
             {
 
-                case Protocol.StartGame:
+                case UnoCommand.START:
 
-                    OnGameStarted?.Invoke(packet.Data);
+                    OnGameStarted?.Invoke(responseContent.ToArray());
+
                     break;
-                case Protocol.UpdateGameState:
-                    UpdateGame?.Invoke(packet.Data);
+                case UnoCommand.UPDATE_FIELD:
+                    UpdateGame?.Invoke(responseContent.ToArray());
                     break;
-                case Protocol.UNO:
-                    UnoAction?.Invoke(packet.Command);
+                case UnoCommand.UNO:
+                    UnoAction?.Invoke(command.ToString());
                     break;
-                case Protocol.Round:
+                case UnoCommand.NEW_ROUND:
 
-                    endRound?.Invoke(packet.Data);
+                    endRound?.Invoke(responseContent.ToArray());
                     break;
-                case Protocol.Victory:
+                case UnoCommand.ERROR_START:
 
-                    onVictory?.Invoke(packet.Data);
+                    Error?.Invoke(responseContent.ToArray());
                     break;
+                case UnoCommand.VICTORY:
 
-
-
-
-
-                default:
-                    Console.WriteLine("Неизвестная команда: " + packet.Command);
+                    onVictory?.Invoke(responseContent.ToArray());
                     break;
             }
+            responseContent.Clear();
+
+
+
         }
 
 
 
-        public void SendMessage(string command, byte[] data = null)
-        {
-            var packet = new Packet
-            {
-                Command = command,
-                Data = data
-            };
 
-            byte[] packetBytes = packet.ToBytes();
-            clientSocket.Send(packetBytes);
+        public async Task SendMessage(UnoCommand command, byte[] data = null)
+        {
+            var packages = GetPackagesByMessage(data, command, QueryType.Request);
+            bool allSent = false;
+
+            while (!allSent)
+            {
+                allSent = true; // Предполагаем, что все пакеты будут отправлены
+
+                foreach (var package in packages)
+                {
+                    try
+                    {
+                        if (clientSocket.Connected)
+                        {
+                            await clientSocket.SendAsync(package, SocketFlags.None);
+                        }
+                        else
+                        {
+                            // Соединение разорвано
+                            MessageBox.Show("Соединение разорвано. Попытка переподключения...");
+                            await Reconnect();
+
+                            // Устанавливаем флаг, чтобы повторить отправку всех пакетов
+                            allSent = false;
+                            break; // Выход из цикла foreach и повторная попытка
+                        }
+                    }
+                    catch (SocketException ex)
+                    {
+                        MessageBox.Show($"Ошибка при отправке сообщения: {ex.Message}");
+                        // Дополнительная обработка ошибки
+                        allSent = false; // Устанавливаем флаг для повторной попытки
+                        break; // Выход из цикла foreach
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Произошла ошибка: {ex.Message}");
+                        // Дополнительная обработка ошибки
+                        allSent = false; // Устанавливаем флаг для повторной попытки
+                        break; // Выход из цикла foreach
+                    }
+                }
+            }
+        }
+
+        private async Task Reconnect()
+        {
+            // Логика для повторного подключения
+            try
+            {
+                // Закрываем старый сокет, если он существует
+                if (clientSocket != null)
+                {
+                    clientSocket.Close();
+                }
+
+                // Подключаемся к серверу (укажите правильный адрес)
+                // Замените на фактический IP-адрес сервера
+                await Connect("127.0.0.1");
+
+                MessageBox.Show("Подключение восстановлено.");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Не удалось восстановить соединение: {ex.Message}");
+                // Дополнительная обработка ошибки
+            }
         }
 
         public void Disconnect()

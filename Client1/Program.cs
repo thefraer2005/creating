@@ -15,10 +15,18 @@ namespace Client1 {
         [STAThread]
         static void Main()
         {
-            
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new StartForm(  ));
+
+            try
+            {
+                Application.EnableVisualStyles();
+                Application.SetCompatibleTextRenderingDefault(false);
+                Application.Run(new StartForm()); // Убедитесь, что конструктор без параметров доступен
+            }
+            catch (Exception ex)
+            {
+                // Обработка исключений (например, логирование)
+                MessageBox.Show($"Ошибка: {ex.Message}");
+            }
         }
     }
 }

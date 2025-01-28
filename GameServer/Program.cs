@@ -10,10 +10,14 @@ namespace UnoServer
 {
     class Program
     {
-        static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
-            GameServer server = new GameServer();
-            server.Start();
+            var server = new GameServer(); // Замените на ваш класс сервера
+            await server.Start();
+
+            // Ожидание ввода от пользователя
+            Console.WriteLine("Нажмите любую клавишу для выхода...");
+         
         }
     }
 }

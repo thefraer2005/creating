@@ -22,6 +22,7 @@ namespace Client1
             InitializeComponent();
             this.gameClient = new GameClient();
 
+            gameClient.Error += HandleGameStarted;
 
 
         }
@@ -73,7 +74,7 @@ namespace Client1
 
         private void btnStartGame_Click(object sender, EventArgs e)
         {
-           nickname = txtNickname.Text.Trim(); // Получаем ник из текстового поля
+            nickname = txtNickname.Text.Trim(); // Получаем ник из текстового поля
 
             if (string.IsNullOrEmpty(nickname)) // Проверка на пустое поле
             {
@@ -83,7 +84,7 @@ namespace Client1
 
             byte[] nicknameBytes = Encoding.UTF8.GetBytes(nickname); // Кодируем ник
             gameClient.Connect("127.0.0.1");
-            gameClient.SendMessage(Protocol.Connect, nicknameBytes);
+            gameClient.SendMessage(UnoCommand.CONNECT, nicknameBytes);
 
             lblErrorMessage.Text = ""; // Очищаем сообщение об ошибке
             this.btnStartGame.Visible = false;
@@ -91,7 +92,7 @@ namespace Client1
 
             CreatePlayerSelectionButtons(); // Метод для создания кнопок выбора игроков
         }
-
+     
         private void CreatePlayerSelectionButtons()
         {
             int buttonWidth = 100;
@@ -139,6 +140,26 @@ namespace Client1
             selectedPlayersCount = playerCount;
             StartGame();
         }
+        private void HandleGameStarted(byte[] responseContent)
+        {
+            // Здесь вы можете проверить количество игроков в responseContent
+            int serverPlayerCount = BitConverter.ToInt32(responseContent, 0); // Предполагаем, что сервер отправляет количество игроков
+
+            if (serverPlayerCount != selectedPlayersCount)
+            {
+                MessageBox.Show("Количество игроков не совпадает. Пожалуйста, выберите снова.");
+                CreatePlayerSelectionButtons();
+            }
+            else
+            {
+                Form1 gameForm = new Form1(this, gameClient, selectedPlayersCount, nickname);
+                gameForm.Show();
+                this.Hide();
+
+            }
+
+        }
+
 
         private void StartGame()
         {
@@ -149,11 +170,13 @@ namespace Client1
                 if (selectedPlayersCount > 0)
                 {
                     byte[] data = BitConverter.GetBytes(selectedPlayersCount);
-                    gameClient.SendMessage(Protocol.StartGame, data);
+                    gameClient.SendMessage(UnoCommand.START, data);
 
-                    Form1 gameForm = new Form1(this, gameClient, selectedPlayersCount,nickname);
-                    gameForm.Show();
-                    this.Hide();
+                  
+
+
+
+
                 }
 
             }

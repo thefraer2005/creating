@@ -38,30 +38,31 @@ namespace Common
                 for (int i = 1; i <= 9; i++)
                 {
                     Cards.Add(new Card(cardId++, color, i.ToString()));
-                    Cards.Add(new Card(cardId++, color, i.ToString()));
+                    Cards.Add(new Card(cardId++, color, null, CardType.DrawTwo));
+                      Cards.Add(new Card(cardId++, color, i.ToString()));
                 }
 
-              Cards.Add(new Card(cardId++, color, null, CardType.Skip));
+             /* Cards.Add(new Card(cardId++, color, null, CardType.Skip));
                 Cards.Add(new Card(cardId++, color, null, CardType.Skip));
                 Cards.Add(new Card(cardId++, color, null, CardType.Reverse));
                 Cards.Add(new Card(cardId++, color, null, CardType.Reverse));
-                Cards.Add(new Card(cardId++, color, null, CardType.DrawTwo)); 
-                Cards.Add(new Card(cardId++, color, null, CardType.DrawTwo));
+               
+                Cards.Add(new Card(cardId++, color, null, CardType.DrawTwo));*/
                
             }
 
             
-            for (int i = 0; i < 4; i++)
+            /*for (int i = 0; i < 4; i++)
             {
                 string randomColor = colors[random.Next(colors.Length)]; // Выбор случайного цвета
                 Cards.Add(new Card(cardId++, randomColor, null, CardType.Wild));
             }
-
-            for (int i = 0; i < 4; i++)
+            
+            for (int i = 0; i < 80; i++)
             {
                 string randomColor = colors[random.Next(colors.Length)]; // Выбор случайного цвета
                 Cards.Add(new Card(cardId++, randomColor, null, CardType.WildDrawFour));
-            }
+            }*/
         }
 
 

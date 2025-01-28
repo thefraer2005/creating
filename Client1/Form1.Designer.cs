@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
@@ -7,6 +8,42 @@ using Common;
 using Newtonsoft.Json;
 namespace Client1
 {
+    using System.Windows.Forms;
+
+    public class CardPictureBox : PictureBox
+    {
+        public int CardId { get; set; }
+    }
+
+    public class RotatedCard : Control
+    {
+        private Image _image;
+
+        public Image CardImage
+        {
+            get => _image;
+            set
+            {
+                _image = value;
+                Invalidate(); // Перерисовать элемент управления при изменении изображения
+            }
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            if (_image != null)
+            {
+                // Установим центр вращения
+                e.Graphics.TranslateTransform(Width / 2, Height / 2);
+                e.Graphics.RotateTransform(90); // Поворачиваем на 90 градусов
+                e.Graphics.TranslateTransform(-_image.Height / 2, -_image.Width / 2); // Перемещаем так, чтобы изображение было по центру
+                e.Graphics.DrawImage(_image, new Point(0, 0));
+            }
+        }
+
+        protected override Size DefaultSize => new Size(100, 150); // Установите размеры по умолчанию
+    }
+
     partial class Form1
     {
 
@@ -34,24 +71,27 @@ namespace Client1
         /// Required method for Designer support - do not modify
         /// the contents of this method with the code editor.
         /// </summary>
-
-
+      
+       
         public int SelectedPlayersCount { get; private set; }
         private System.Windows.Forms.Label lblFirstCard;
 
 
         private System.Windows.Forms.Label lblWaiting;
-        // Создание PictureBox для GIF-анимации загрузки
         private System.Windows.Forms.PictureBox pbLoading;
 
         private System.Windows.Forms.Panel flpPlayerCards;
         private System.Windows.Forms.Panel flpOpponentCards;
+        private System.Windows.Forms.Panel flpOpponentCards3;
+        private System.Windows.Forms.Panel flpOpponentCards4;
         private System.Windows.Forms.Panel pnlCenterCard;
         private System.Windows.Forms.Panel pnlDeck;
         private Panel pnlColorIndicator;
         private Label currentPlayerIndicator;
         private Dictionary<int, Panel> playerCardPanels = new Dictionary<int, Panel>();
         private Dictionary<int, Panel> opponentCardPanels = new Dictionary<int, Panel>();
+        private Dictionary<int, Panel> opponentCardPanels3 = new Dictionary<int, Panel>();
+        private Dictionary<int, Panel> opponentCardPanels4 = new Dictionary<int, Panel>();
 
         private void InitializeComponent()
         {
@@ -60,29 +100,33 @@ namespace Client1
 
             this.lblWaiting = new System.Windows.Forms.Label();
             this.lblWaiting.Text = "Ждем подключения...";
-            this.lblWaiting.AutoSize = true; 
+            this.lblWaiting.AutoSize = true;
             this.Controls.Add(lblWaiting);
 
             this.pbLoading = new System.Windows.Forms.PictureBox();
-            this.pbLoading.Image = Image.FromFile("C:/Users/ASUS/source/repos/Server/Server/img/wait.gif");
-            this.pbLoading.SizeMode = PictureBoxSizeMode.StretchImage; 
-                                                                      
+            this.pbLoading.Image = Image.FromFile("C:/Users/ASUS/source/repos/Server/Server/img/wait.gif"); 
+            this.pbLoading.SizeMode = PictureBoxSizeMode.StretchImage;
+                                                                    
 
             this.Controls.Add(pbLoading);
 
             this.components = new System.ComponentModel.Container();
             this.ClientSize = new System.Drawing.Size(700, 700);
-            this.StartPosition = FormStartPosition.Manual; 
+            this.StartPosition = FormStartPosition.Manual;
             this.Location = new System.Drawing.Point(50, 50);
             this.BackColor = Color.Khaki;
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 
             this.Text = "Form1";
 
+           
             this.pnlCenterCard = new System.Windows.Forms.Panel();
             this.pnlCenterCard.Visible = false;
+            this.pnlCenterCard.BackColor = Color.Beige;
             this.Controls.Add(this.pnlCenterCard);
+
             this.pnlColorIndicator = new System.Windows.Forms.Panel();
+
             this.pnlColorIndicator.Visible = false;
             this.Controls.Add(this.pnlColorIndicator);
 
@@ -99,7 +143,7 @@ namespace Client1
 
             this.flpPlayerCards = new System.Windows.Forms.Panel();
             this.flpPlayerCards.Name = "flpPlayerCards";
-            this.flpPlayerCards.BackColor = System.Drawing.Color.Khaki;
+            this.flpPlayerCards.BackColor = System.Drawing.Color.Transparent;
             this.flpPlayerCards.Visible = false;
             this.Controls.Add(this.flpPlayerCards);
 
@@ -107,21 +151,63 @@ namespace Client1
             this.flpOpponentCards.Name = "flpOpponentCards";
             this.flpOpponentCards.Visible = false;
             this.flpOpponentCards.BackColor = System.Drawing.Color.Khaki;
+            this.Controls.Add(this.flpOpponentCards);
+
+             this.flpOpponentCards3 = new System.Windows.Forms.Panel();
+             this.flpOpponentCards3.Name = "flpOpponentCards";
+             this.flpOpponentCards3.Visible = false;
+            
+             this.flpOpponentCards3.BackColor = System.Drawing.Color.Transparent;
+            this.Controls.Add(this.flpOpponentCards3);
+
+            this.flpOpponentCards4 = new System.Windows.Forms.Panel();
+             this.flpOpponentCards4.Name = "flpOpponentCards";
+             this.flpOpponentCards4.Visible = false;
+             this.flpOpponentCards4.BackColor = System.Drawing.Color.Indigo;
+            this.Controls.Add(this.flpOpponentCards4);
+
+            this.DoubleBuffered = true;
+
 
 
             this.currentPlayerIndicator.Visible = false;
 
 
-            this.Controls.Add(this.flpOpponentCards);
+            
         }
-        private void Form1_Resize(object sender, EventArgs e)
+        private async void Form1_Resize(object sender, EventArgs e)
         {
-            UpdateCardList(playerCardPanels, playerCards, playerCards, flpPlayerCards, true);
-            UpdateCardList(opponentCardPanels, opponentCards, opponentCards, flpOpponentCards, false);
+            if (victoryForm != null && !victoryForm.IsDisposed)
+            {
+                victoryForm.UpdateSizeAndPosition(this); 
+            }
+           await UpdateCardList(playerCardPanels, playerHands[nickName], playerHands[nickName], flpPlayerCards, true, false, nickName);
+
+            switch (otherPlayers.Count)
+            {
+                case 2:
+                   await  UpdateCardList(opponentCardPanels, playerHands[otherPlayers[nextIndex]], playerHands[otherPlayers[nextIndex]], flpOpponentCards, true, false, otherPlayers[nextIndex]); // Обновление списка карт противника
+                // Обновление списка карт противника
+
+                    break;
+                case 3:
+                    await UpdateCardList(opponentCardPanels3, playerHands[otherPlayers[nextIndex]], playerHands[otherPlayers[nextIndex]], flpOpponentCards3, true, true, otherPlayers[nextIndex]); // Обновление списка карт противника
+
+                    await UpdateCardList(opponentCardPanels4, playerHands[otherPlayers[previousIndex]], playerHands[otherPlayers[previousIndex]], flpOpponentCards4, true, true, otherPlayers[previousIndex]); // Обновление списка карт противника
+
+                    break;
+                case 4:
+                    await UpdateCardList(opponentCardPanels3, playerHands[otherPlayers[nextIndex]], playerHands[otherPlayers[nextIndex]], flpOpponentCards3, true, true, otherPlayers[nextIndex]); // Обновление списка карт противника
+                    await UpdateCardList(opponentCardPanels, playerHands[otherPlayers[nextNextIndex]], playerHands[otherPlayers[nextNextIndex]], flpOpponentCards, true, false, otherPlayers[nextNextIndex]);
+                    await UpdateCardList(opponentCardPanels4, playerHands[otherPlayers[previousIndex]], playerHands[otherPlayers[previousIndex]], flpOpponentCards4, true, true, otherPlayers[previousIndex]); // Обновление списка карт противника
+
+                    break;
+            }
+
             AdjustLayout();
         }
 
-       private void AdjustLayout()
+        private void AdjustLayout()
         {
             int formWidth = this.ClientSize.Width;
             int formHeight = this.ClientSize.Height;
@@ -139,12 +225,21 @@ namespace Client1
             pbLoading.Location = new Point((int)(formWidth * 0.4), (int)(formHeight * 0.4));
             pbLoading.Size = new Size((int)(formWidth * 0.2), (int)(formHeight * 0.2));
 
-            flpPlayerCards.Size = new Size((int)(formWidth * 0.9), (int)(formHeight * 0.225));
-            flpPlayerCards.Location = new Point((int)(formWidth * 0.03), (int)(formHeight * 0.725)); 
+            flpPlayerCards.Size = new Size((int)(formWidth * 0.45), (int)(formHeight * 0.225));
+            flpPlayerCards.Location = new Point((int)(formWidth * 0.225), (int)(formHeight * 0.725)); 
 
-            flpOpponentCards.Size = new Size((int)(formWidth * 0.9), (int)(formHeight * 0.225));
-            flpOpponentCards.Location = new Point((int)(formWidth * 0.03), (int)(formHeight * 0.05));
+            flpOpponentCards.Size = new Size((int)(formWidth * 0.45), (int)(formHeight * 0.225));
+            flpOpponentCards.Location = new Point((int)(formWidth * 0.225), (int)(formHeight * 0.05));
 
+
+
+
+            flpOpponentCards3.Size = new Size((int)(formWidth * 0.225), (int)(formHeight * 0.45));
+            flpOpponentCards3.Location = new Point((int)(formWidth * 0.725), (int)(formHeight * 0.225));
+
+            flpOpponentCards4.Size = new Size((int)(formWidth * 0.225), (int)(formHeight * 0.45));
+            flpOpponentCards4.Location = new Point((int)(formWidth * 0.05), (int)(formHeight * 0.225));
+            
             pnlDeck.Size = new Size((int)(formWidth * 0.15), (int)(formHeight * 0.225));
             pnlDeck.Location = new Point((int)(formWidth * 0.3), (int)(formHeight * 0.4)); 
 
@@ -158,12 +253,9 @@ namespace Client1
             UpdateCurrentPlayerIndicator(currentPlayer);
         }
 
-
-
-
         private void UpdateCurrentPlayerIndicator(string currentTurnNickname)
         {
-
+           
             int formWidth = this.ClientSize.Width;
             int formHeight = this.ClientSize.Height;
 
@@ -171,20 +263,20 @@ namespace Client1
             {
                 currentPlayerIndicator.Location = new Point(flpPlayerCards.Location.X + flpPlayerCards.Width + 10,
                     flpPlayerCards.Location.Y + (flpPlayerCards.Height / 2) - (currentPlayerIndicator.Height / 2));
-                currentPlayerIndicator.Visible = true;
+                currentPlayerIndicator.Visible = true; 
             }
             else
             {
                 currentPlayerIndicator.Location = new Point(flpOpponentCards.Location.X + flpOpponentCards.Width + 10,
                     flpOpponentCards.Location.Y + (flpOpponentCards.Height / 2) - (currentPlayerIndicator.Height / 2));
-                currentPlayerIndicator.Visible = true; 
+                currentPlayerIndicator.Visible = true;
             }
         }
 
 
         private void UpdateCardSizes()
         {
-            int cardWidth = (int)(this.ClientSize.Width * 0.15);
+            int cardWidth = (int)(this.ClientSize.Width * 0.15); 
             int cardHeight = (int)(this.ClientSize.Height * 0.225); 
 
 
@@ -220,16 +312,57 @@ namespace Client1
                     card.Size = new Size(cardWidth, cardHeight);
                 }
             }
+            foreach (Control card in flpOpponentCards3.Controls)
+            {
+                if (card is Panel)
+                {
+                    card.Size = new Size(cardHeight, cardWidth);
+                }
+            }
+            foreach (Control card in flpOpponentCards4.Controls)
+            {
+                if (card is Panel)
+                {
+                    card.Size = new Size(cardHeight, cardWidth);
+                }
+            }
+            
+
+        }
+        private Image RotateImage(string imagePath)
+        {
+            using (Image originalImage = Image.FromFile(imagePath))
+            {
+                // Создаем новое изображение с размерами, соответствующими повёрнутому изображению
+                Bitmap rotatedImage = new Bitmap(originalImage.Height, originalImage.Width);
+
+                using (Graphics g = Graphics.FromImage(rotatedImage))
+                {
+                    // Устанавливаем точку вращения и угол поворота
+                    g.TranslateTransform(rotatedImage.Width / 2, rotatedImage.Height / 2);
+                    g.RotateTransform(90);
+                    g.TranslateTransform(-originalImage.Width / 2, -originalImage.Height / 2);
+
+                    // Рисуем оригинальное изображение
+                    g.DrawImage(originalImage, new Point(0, 0));
+                }
+
+                return rotatedImage;
+            }
         }
 
-        private Panel DrawCard(Card card, bool isPlayerCard, bool firstCard, bool main)
+        private Panel DrawCard(Card card, bool isPlayerCard, bool firstCard, bool main, bool many)
         {
+          
+
+
             int cardWidth = (int)(this.ClientSize.Width * 0.15);
             int cardHeight = (int)(this.ClientSize.Height * 0.225);
+
             Panel cardPanel = new Panel
             {
-                Size = new Size(cardWidth, cardHeight)
-
+                Size = new Size(cardWidth, cardHeight),
+                BackColor = Color.LightBlue
             };
 
             string imagePath = isPlayerCard ? GetImagePath(card) : GetFaceDownImagePath();
@@ -237,13 +370,34 @@ namespace Client1
             {
                 imagePath = GetFaceDownImagePath();
             }
-
-            PictureBox pictureBox = new PictureBox
+            CardPictureBox pictureBox = new CardPictureBox
             {
                 Image = Image.FromFile(imagePath),
                 SizeMode = PictureBoxSizeMode.StretchImage,
-                Dock = DockStyle.Fill
+                Dock = DockStyle.Fill,
+                CardId = card.Id // Устанавливаем ID карты
             };
+            if (many)
+            {
+                cardPanel.Size = new Size(cardHeight, cardWidth);
+                pictureBox.Image.RotateFlip(RotateFlipType.Rotate90FlipNone); // Поворачиваем изображение на 90 градусов
+            }
+            /*if (many) // Замените someCondition на ваше условие
+            {
+                // Изменяем размеры панели
+                cardPanel.Size = new Size(cardHeight, cardWidth);
+                Image rotatedImage = RotateImage(imagePath);
+
+                pictureBox = new CardPictureBox
+                {
+                    Image = rotatedImage,
+                    SizeMode = PictureBoxSizeMode.StretchImage,
+                    Dock = DockStyle.Fill,
+                     CardId = card.Id
+                };
+
+                // Замените newWidth и newHeight на нужные значения
+            }*/
 
             cardPanel.Controls.Add(pictureBox);
 
@@ -251,13 +405,13 @@ namespace Client1
             {
                 pictureBox.Click += (sender, e) =>
                 {
-                    if (currentPlayer.Equals(nickName)) 
+                    if (currentPlayer.Equals(nickName))
                     {
                         OnColodaClick();
                     }
                     else
                     {
-                        MessageBox.Show("Сейчас не ваш ход!");
+                        MessageBox.Show("не твой хлд!");
                     }
                 };
                 pnlDeck.Controls.Add(cardPanel);
@@ -270,67 +424,22 @@ namespace Client1
                 }
                 else
                 {
-                    pictureBox.Click += (sender, e) =>
-                    {
-                        if (currentPlayer.Equals(nickName)) 
-                        {
-                            OnCardClick(card);
-                        }
-                        else
-                        {
-                            MessageBox.Show("Сейчас не ваш ход!");
-                        }
-                    };
+                   
+                   
+                   
                 }
             }
 
             return cardPanel;
         }
-        public void OnCardClick(Card card)
-        {
-            if (IsValidMove(card, centralCard))
-            {
-                if (card.Type == CardType.Wild)
-                {
-                    using (var colorForm = new ColorSelectionForm())
-                    {
-                        if (colorForm.ShowDialog() == DialogResult.OK)
-                        {
-                            CardColor selectedColor = colorForm.SelectedColor;
+       
 
-                            SendPlayCardPacket(card, selectedColor);
-                        }
-                    }
-                }
-                else if (card.Type == CardType.WildDrawFour)
-                {
-                    if (HasNoMatchingCard(playerCards, centralCard))
-                    {
-                        using (var colorForm = new ColorSelectionForm())
-                        {
-                            if (colorForm.ShowDialog() == DialogResult.OK)
-                            {
-                                CardColor selectedColor = colorForm.SelectedColor;
 
-                                SendPlayCardPacket(card, selectedColor);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        MessageBox.Show("У вас есть  карта, соответствующая центральной. Вы не можете сыграть эту карту.");
-                    }
-                }
-                else
-                {
-                    SendPlayCardPacket(card);
-                }
-            }
-            else
-            {
-                MessageBox.Show("Неверный ход! Карта не соответствует центральной.");
-            }
-        }
+       
+
+
+
+
         private void SendPlayCardPacket(Card card, CardColor? selectedColor = null)
         {
             if (selectedColor != null)
@@ -343,15 +452,9 @@ namespace Client1
             string jsonData = JsonConvert.SerializeObject(card);
             byte[] dataBytes = Encoding.UTF8.GetBytes(jsonData);
 
-            var packet = new Packet
-            {
-                Command = Protocol.PlayCard,
-                Data = dataBytes
-            };
+            
 
-            byte[] packetData = packet.ToBytes();
-
-            gameClient.SendMessage(packet.Command, packet.Data);
+            gameClient.SendMessage(UnoCommand.PLAY_CARD, dataBytes);
         }
         private bool HasNoMatchingCard(List<Card> hand, Card centralCard)
         {
@@ -382,9 +485,10 @@ namespace Client1
             if (card.Type == CardType.Wild || card.Type == CardType.WildDrawFour)
             {
               
-                return true; 
+                return true;
             }
            
+            // Проверка на соответствие по цвету или значению
             return card.Color == centralCard.Color || card.Value == centralCard.Value;
         }
         private bool IsValidСoloda(List<Card> playerCards, Card centralCard)
@@ -401,18 +505,11 @@ namespace Client1
         }
         private void OnColodaClick()
         {
-            if (!IsValidСoloda(playerCards, centralCard))
+            if (!IsValidСoloda(playerHands[nickName], centralCard))
             {
 
-                var packet = new Packet
-                {
-                    Command = Protocol.GiveCard, 
 
-                };
-
-                byte[] packetData = packet.ToBytes();
-
-                gameClient.SendMessage(packet.Command);
+                gameClient.SendMessage(UnoCommand.GIVECARD);
             }
             else
             {
@@ -430,7 +527,8 @@ namespace Client1
 
         private string GetImagePath(Card card)
         {
-            string baseImagePath = Path.Combine("C:/Users/ASUS/source/repos/Server/Server", "img");
+            //string baseImagePath = Path.Combine("C:/Users/ASUS/source/repos/Server/Server", "img");
+            string baseImagePath = Path.Combine("..", "Server", "img");
 
             string imageFileName;
 

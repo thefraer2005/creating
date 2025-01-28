@@ -12,6 +12,8 @@ using System.Threading;
 using static System.Collections.Specialized.BitVector32;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using System.Numerics;
+using static Common.Package11207Helper;
+using System.Reflection.Metadata;
 
 namespace UnoServer
 {
@@ -24,9 +26,14 @@ namespace UnoServer
     }
     public class GameServer
     {
+        private CancellationTokenSource ctxSource = new CancellationTokenSource();
+        private const int MaxTimeout = 5 * 60 * 1000;
         private List<Player> players = new List<Player>();
         List<string> actions = new List<string>();
         private Socket serverSocket;
+
+        private readonly List<Socket> _clients = new();
+
         private Deck deck; 
         private bool gameStarted = false;
   
@@ -37,127 +44,236 @@ namespace UnoServer
         
         private int playerInit=0;
         private int playerInits=0;
-        public void Start()
+        public async Task Start()
         {
             serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            serverSocket.Bind(new IPEndPoint(IPAddress.Any, 12345));
-            serverSocket.Listen(10);
+            serverSocket.Bind(new IPEndPoint(IPAddress.Any, 5000));
+           
 
-            Console.WriteLine("Сервер запущен...");
+           
 
-            while (true)
-            {
-                Socket clientSocket = serverSocket.Accept();
-                Player player = new Player(clientSocket);
-                 players.Add(player);
-
-                Console.WriteLine($"Игрн: {player.Nickname}");
-
-                Thread clientThread = new Thread(() => HandleClient(player));
-                clientThread.Start();
-                
-
-            }
-        }
-        private void HandleClient(Player player)
-        {
             try
             {
-                while (true)
+                serverSocket.Listen();
+                Console.WriteLine("Сервер запущен...");
+                do
                 {
-                    byte[] buffer = new byte[1024];
-                    int bytesRead = player.Socket.Receive(buffer);
+                    Socket clientSocket = await serverSocket.AcceptAsync();
 
-                    var packet = Packet.FromBytes(buffer.Take(bytesRead).ToArray());
+                
+                    Player player = new Player(clientSocket);
+                    players.Add(player);
 
-                    Console.WriteLine($"Игрок добавлен: {player.Nickname}");
-                    Console.WriteLine($"Получено сообщение от игрока {player.Nickname}: Команда - {packet.Command}");
+                    Console.WriteLine($"Игрн: {players.Count}");
 
-                    ProcessCommand(player, packet);
-                }
+                    _ = Task.Run(async () => await HandleClient(player));
+
+                } while (players.Count != 0);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Ошибка: {ex.Message}");
+                Console.WriteLine($"meesaggee   {ex}");
+                StopAsync();
+            }
+
+
+
+        }
+
+        private void StopAsync()
+        {
+            serverSocket.Close();
+        }
+
+
+        private async Task HandleClient(Player player)
+        {
+            Console.WriteLine($"Игрок: {player.Hand.Count}");
+
+            try
+            {
+                while (player.Socket.Connected)
+                {
+                    byte[] buffer = new byte[MaxPacketSize];
+                    var contentLength = await player.Socket.ReceiveAsync(new ArraySegment<byte>(buffer), SocketFlags.None);
+
+                 
+
+                    var content = new List<byte>();
+                    content.AddRange(GetContent(buffer, contentLength));
+
+                    if (!IsQueryValid(buffer, contentLength) || IsPartial(buffer[Fullness]))
+                    {
+                        Console.WriteLine($"Неверный запрос: {contentLength}");
+                        continue;
+                    }
+
+                    var command = GetCommand(buffer[Command]);
+                 
+
+                    await ProcessSocketConnect(player, content, command, player.Socket);
+                }
+            }
+            catch (SocketException ex)
+            {
+                Console.WriteLine($"Ошибка сокета: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка: {ex.Message}\nСтек вызовов: {ex.StackTrace}");
             }
             finally
             {
+                Console.WriteLine($"Отключение игрока");
                 player.Socket.Close();
                 players.Remove(player);
-                if (gameStarted)
-                {
-                    gameStarted = false;
-
-                }
+              
             }
         }
 
-        private void ProcessCommand(Player player, Packet packet)
+        private Dictionary<Socket, int> selectCountPlayers = new Dictionary<Socket, int>();
+        private int initialPlayerCount = -1;
+        private int playerInitss = 0;
+        private async Task ProcessSocketConnect( Player player,List<byte> content,UnoCommand comm, Socket socket)
         {
-            switch (packet.Command)
+            Console.WriteLine($"command --- {comm}");
+
+
+            try
             {
-                case Protocol.Connect:
-                   
-                    player.Nickname = System.Text.Encoding.UTF8.GetString(packet.Data);
-                    Console.WriteLine($"игрок добавлавыен {player.Nickname}");
-                   
-                    break;
-                case Protocol.StartGame:
-                    playerInit += 1;
-                    if (playerInit == 2)
-                    {
-                        StartGame();
+                switch (comm)
+                {
+                    case UnoCommand.CONNECT:
+                        // Обработка команды подключения
+                        player.Nickname = System.Text.Encoding.UTF8.GetString(content.ToArray());
+                        Console.WriteLine($"игрок добавлавыен --- {player.Nickname}");
+                        break;
+
+                    case UnoCommand.START:
+                        int selectedPlayersCount = BitConverter.ToInt32(content.ToArray(), 0);
+
+                        // Проверяем, является ли текущий игрок первым, выбравшим количество игроков
+                        if (initialPlayerCount == -1)
+                        {
+                            // Если это первый игрок, устанавливаем его выбор
+                            initialPlayerCount = selectedPlayersCount;
+                        }
+
+                        // Добавляем или обновляем количество выбранных игроков для данного сокета
+                        selectCountPlayers[socket] = selectedPlayersCount;
+
+                        bool allInitialPlayersMatch = selectCountPlayers.Values.Take(initialPlayerCount).All(count => count == initialPlayerCount);
+                        await SendMessageToSocket(socket, initialPlayerCount);
+
+                        if (selectCountPlayers.Count() == initialPlayerCount && allInitialPlayersMatch)
+                        {
+                            
+                            await StartGame(socket);
+                        }
+                        
+
+
+                        break;
                        
-                    }
-                    break;
-                case Protocol.PlayCard:
-                    HandlePlayCard(player, packet);
-                    break;
-                case Protocol.UNO:
-                    actions.Add("uno");
-                    UnoFlag = true;
-                    break;
-                case Protocol.GiveCard:
-                    GiveCard(player);
-                    break;
-                case Protocol.NewRound:
-                    playerInits += 1;
-                    if(playerInits == 2)
-                    {
-                        StartGame();
+
+                    case UnoCommand.PLAY_CARD:
+                        // Обработка команды сыграть карту
+                        await HandlePlayCard(player, socket, content.ToArray());
+                        break;
+                    case UnoCommand.SWAP:
+                        int cardIdToSwap = JsonConvert.DeserializeObject<int>(Encoding.UTF8.GetString(content.ToArray()));
+
+                        // Получаем руку игрока
                        
-                    }
-                     
-                    
-                   
-                    break;
 
+                        // Проверяем, есть ли у игрока хотя бы одна карта
+                        if (player.Hand.Count > 0)
+                        {
+                            // Находим индекс карты, которую нужно поменять
+                            int indexToSwap = player.Hand.FindIndex(c => c.Id == cardIdToSwap);
 
+                            // Проверяем, что карта найдена
+                            if (indexToSwap >= 0)
+                            {
+                                // Меняем первую карту с картой, идентификатор которой был получен
+                                var tempCard = player.Hand[0];
+                                player.Hand[0] = player.Hand[indexToSwap];
+                                player.Hand[indexToSwap] = tempCard;
 
+                                Console.WriteLine("поменялись местами");
 
+                            }
+                            else
+                            {
+                                Console.WriteLine("Карта с указанным ID не найдена в руке игрока.");
+                            }
+                        }
 
-                default:
-                    
-                    break;
+                        break;
+
+                    case UnoCommand.UNO:
+                        // Обработка команды UNO
+                        actions.Add("uno");
+
+                        UnoFlag = true;
+                        Console.WriteLine($"Now uno flag truuuueee {player.Nickname}");
+
+                        break;
+
+                    case UnoCommand.GIVECARD:
+                        // Обработка команды раздать карты
+                        await GiveCard(player, socket);
+                        break;
+
+                    case UnoCommand.NEW_ROUND:
+                        playerInits += 1;
+                        if (playerInits == 2)
+                        {
+                           await  StartGame(socket);
+
+                        }
+                        break;
+                }
+                content.Clear();
+                
+            }
+            catch
+            {
+                socket.Disconnect(false);
             }
         }
-        private void CheckStartGame(byte[] data)
+        private async Task SendMessageToSocket(Socket socket, int number)
+        {
+            byte[] messageBytes = BitConverter.GetBytes(number);
+
+            // Получаем пакеты на основе байтового массива
+            var packages = GetPackagesByMessage(messageBytes, UnoCommand.ERROR_START, QueryType.Response);
+
+            // Отправляем каждый пакет
+            foreach (var package in packages)
+            {
+                await socket.SendAsync(new ArraySegment<byte>(package), SocketFlags.None);
+            }
+        }
+
+
+        private void CheckStartGame(byte[] data, Socket socket)
         {
             int playerCount = BitConverter.ToInt32(data, 0);
             Console.WriteLine($"ayoue countood {playerCount}");
             Console.WriteLine($"acount {players.Count}");
 
-        
 
-            if ( players.Count == playerCount)
+
+            if (players.Count == playerCount)
             {
                 Console.WriteLine("alles good");
 
-               
-                StartGame();
+
+                StartGame(socket);
             }
         }
-        private void HandlePlayCard(Player player, Packet packet)
+        private async Task HandlePlayCard(Player player, Socket socket, byte[] packet)
         {
             var cardUpdater = new CardUpdater();
             int currentPlayerIndex = players.FindIndex(player => player.Nickname == turnPlayer);
@@ -169,41 +285,24 @@ namespace UnoServer
 
 
 
-            string jsonData = Encoding.UTF8.GetString(packet.Data);
+            string jsonData = Encoding.UTF8.GetString(packet);
             var cardData = JsonConvert.DeserializeObject<Card>(jsonData);
             Console.WriteLine($"Card received - Id: {cardData.Id}, Value: {cardData.Value}, Color: {cardData.Color}");
-            if (!UnoFlag&& players[previousPlayerIndex].Hand.Count == 1)
+            if (!UnoFlag && players[previousPlayerIndex].Hand.Count == 1)
             {
                 var (updatedHandUno, previosIndexs) = cardUpdater.NotUno(turnPlayer, players, 2, deck);
                 Console.WriteLine($"не sdfghddddfуспел.");
 
                 players[previosIndexs].Hand = updatedHandUno;
-                var updatePacket = new Packet
-                {
-                    Command = Protocol.UNO,
+                var packages = GetPackagesByMessage(null, UnoCommand.UNO, QueryType.Response);
 
-                };
-
-                byte[] packetData = updatePacket.ToBytes();
-
-
-                foreach (var p in players)
-                {
-                    try
-                    {
-                        p.SendMessage(packetData);
-                        Console.WriteLine($"не успел.");
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Ошибка при отправкеоку {p.Nickname}: {ex.Message}");
-                    }
-                }
+                packages.ForEach(
+                    async p => await BroadcastMessageAsync(socket, p, ctxSource.Token));
 
 
             }
             UnoFlag = false;
-            Console.WriteLine($"не count cars {previousPlayer.Hand.Count}.");
+            Console.WriteLine($"не count s {previousPlayer.Hand.Count}.");
 
             if (IsValidMove(cardData, centralCard))
             {
@@ -213,7 +312,7 @@ namespace UnoServer
                     playerCard.Color = cardData.Color;
                 }
                 // Удаляем карту из руки игрока
-                UpdatePlayerCards(player, cardData.Id, false);
+                await UpdatePlayerCards(player, cardData.Id, false, socket);
 
                 // Обновляем центральную карту
 
@@ -238,12 +337,12 @@ namespace UnoServer
             }
             Console.WriteLine();
         }
-        private void StartGame()
+        private async Task StartGame(Socket socket)
         {
             playerInit = 0;
             playerInits = 0;
             gameStarted = true;
-            deck = new Deck(); 
+            deck = new Deck();
             deck.Shuffle();
             centralCard = deck.Draw();
             Console.WriteLine($"Central card :{centralCard}");
@@ -255,18 +354,18 @@ namespace UnoServer
                 List<Card> hand = new List<Card>();
                 for (int i = 0; i < 7; i++)
                 {
-                    Card drawnCard = deck.Draw(); 
+                    Card drawnCard = deck.Draw();
                     hand.Add(drawnCard);
                 }
                 player.Hand.Clear();
                 player.Hand = hand;
-               
-                gameStartInfo.PlayerHands[player.Nickname] = player.Hand; 
+
+                gameStartInfo.PlayerHands[player.Nickname] = player.Hand;
                 DisplayPlayerHand(player);
             }
-            
+
             turnPlayer = players[0].Nickname;
-           
+
             Console.WriteLine(turnPlayer);
             gameStartInfo.FirstPlayerNickname = turnPlayer;
             gameStartInfo.FirstCard = centralCard;
@@ -274,29 +373,28 @@ namespace UnoServer
             string jsonData = JsonConvert.SerializeObject(gameStartInfo);
             byte[] dataBytes = Encoding.UTF8.GetBytes(jsonData);
 
-            var startPacket = new Packet
-            {
-                Command = Protocol.StartGame,
-                Data = dataBytes
-            };
-
-            byte[] packetData = startPacket.ToBytes();
-
+            var packages = GetPackagesByMessage(dataBytes, UnoCommand.START, QueryType.Response);
+            var tasks = packages.Select(p => BroadcastMessageAsync(socket, p, ctxSource.Token)).ToArray();
+            await Task.WhenAll(tasks);
+           
+        }
+        private async Task BroadcastMessageAsync(Socket socket, byte[] message,
+       CancellationToken ctx)
+        {
+            var semaphore = new SemaphoreSlim(1);
             foreach (var player in players)
             {
-                try
-                {
-                    player.SendMessage(packetData);
-                    Console.WriteLine($"Сообщение отправлено игроку {player.Nickname}.");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Ошибка при отправке сообщения игроку {player.Nickname}: {ex.Message}");
-                }
+                Console.WriteLine("1");
+                await semaphore.WaitAsync(ctx);
+                await player.Socket.SendAsync(message, SocketFlags.None, ctx);
+                semaphore.Release(1);
             }
+
+            semaphore.Dispose();
         }
 
-        
+
+
 
         private bool IsValidMove(Card card, Card centralCard)
         {
@@ -307,10 +405,10 @@ namespace UnoServer
 
             return card.Color == centralCard.Color || card.Value == centralCard.Value;
         }
-       
 
 
-        private void GiveCard(Player player)
+
+        private async Task GiveCard(Player player, Socket socket)
         {
             if (deck.Cards.Count > 0)
             {
@@ -321,7 +419,7 @@ namespace UnoServer
                     player.Hand.Add(drawnCard);
                     Console.WriteLine($"{player.Nickname} получил кnnарту {drawnCard}.");
 
-                    UpdatePlayerCards(player, drawnCard.Id, true);
+                    await UpdatePlayerCards(player, drawnCard.Id, true, socket);
                 }
                 catch (InvalidOperationException ex)
                 {
@@ -342,7 +440,7 @@ namespace UnoServer
                 switch (card.Type)
                 {
                     case CardType.Number:
-                        totalPoints += int.Parse(card.Value); 
+                        totalPoints += int.Parse(card.Value);
                         break;
                     case CardType.Skip:
                     case CardType.Reverse:
@@ -360,7 +458,7 @@ namespace UnoServer
 
             return totalPoints;
         }
-        private void CalculateTotalPointsWinner()
+        private async Task CalculateTotalPointsWinner(Socket socket)
         {
             Console.WriteLine($"Starting CalculateTotalPointsWinner");
 
@@ -372,7 +470,7 @@ namespace UnoServer
                 if (player.Hand.Count == 0)
                 {
                     winnerNickname = player.Nickname;
-                    
+
                 }
                 totalPoints += CalculateTotalPoints(player.Hand);
             }
@@ -388,7 +486,7 @@ namespace UnoServer
                         player.Score += totalPoints;
                         Console.WriteLine($"Player {player.Nickname} score updated to {player.Score}");
                     }
-                   
+
                 }
 
                 bool victoryAchieved = false;
@@ -406,14 +504,10 @@ namespace UnoServer
                         string jsonData = JsonConvert.SerializeObject(winnerInfo);
                         byte[] dataBytes = Encoding.UTF8.GetBytes(jsonData);
 
-                        var updatePacket = new Packet
-                        {
-                            Command = Protocol.Victory,
-                            Data = dataBytes
-                        };
+                        var packages = GetPackagesByMessage(dataBytes, UnoCommand.VICTORY, QueryType.Response);
 
-                        byte[] packetData = updatePacket.ToBytes();
-                        Broadcast(packetData);
+                        packages.ForEach(
+                            async p => await BroadcastMessageAsync(socket, p, ctxSource.Token));
                         victoryAchieved = true;
                         break;
                     }
@@ -430,14 +524,11 @@ namespace UnoServer
                     string jsonData = JsonConvert.SerializeObject(winnerInfo);
                     byte[] dataBytes = Encoding.UTF8.GetBytes(jsonData);
 
-                    var updatePacket = new Packet
-                    {
-                        Command = Protocol.Round,
-                        Data = dataBytes
-                    };
+                    var packages = GetPackagesByMessage(dataBytes, UnoCommand.NEW_ROUND, QueryType.Response);
 
-                    byte[] packetData = updatePacket.ToBytes();
-                    Broadcast(packetData);
+                    packages.ForEach(
+                        async p => await BroadcastMessageAsync(socket, p, ctxSource.Token));
+
                 }
             }
             else
@@ -448,18 +539,18 @@ namespace UnoServer
 
 
 
-        private void UpdatePlayerCards(Player player, int cardId, bool isAdding)
+        private async Task UpdatePlayerCards(Player player, int cardId, bool isAdding, Socket socket)
         {
             var cardUpdater = new CardUpdater();
             if (isAdding)
             {
-               
+
                 Card cardToUpdate = player.Hand.FirstOrDefault(card => card.Id == cardId);
 
                 if (IsValidMove(cardToUpdate, centralCard))
                 {
                     Console.WriteLine($"новая карта подходит");
-                   
+
                 }
                 else
                 {
@@ -471,7 +562,7 @@ namespace UnoServer
             }
             else
             {
-               
+
                 Card cardToRemove = player.Hand.FirstOrDefault(card => card.Id == cardId);
                 switch (cardToRemove.Type)
                 {
@@ -510,7 +601,7 @@ namespace UnoServer
 
                         Console.WriteLine($"turn befodfgre {turnPlayer}");
                         turnPlayer = cardUpdater.HandleNumber(turnPlayer, players);
-                        Console.WriteLine($"turn aftgfdser {turnPlayer}"); 
+                        Console.WriteLine($"turn aftgfdser {turnPlayer}");
                         break;
 
                     case CardType.WildDrawFour:
@@ -530,72 +621,60 @@ namespace UnoServer
                 centralCard = cardToRemove;
                 if (cardToRemove != null)
                 {
-                  
+
                     player.Hand.Remove(cardToRemove);
                     Console.WriteLine($"Карта с ID {cardId} убрана из руки и добавлена на стол {player.Nickname}.");
                 }
                 else
                 {
                     Console.WriteLine($"Карта с ID {cardId} не найдена в колоде.");
-                    return; 
+                    return;
                 }
             }
-             var updateInfo = new GameStartInfo
+            var updateInfo = new GameStartInfo
             {
-                FirstPlayerNickname = turnPlayer, 
+                FirstPlayerNickname = turnPlayer,
                 FirstCard = centralCard,
-                PlayerHands = new Dictionary<string, List<Card>>() 
+                PlayerHands = new Dictionary<string, List<Card>>()
             };
 
             foreach (var p in players)
             {
-                updateInfo.PlayerHands[p.Nickname] = p.Hand; 
+                updateInfo.PlayerHands[p.Nickname] = p.Hand;
+                Console.WriteLine($"{p.Nickname}'s hand:");
+                foreach (var card in p.Hand)
+                {
+                    Console.WriteLine($" - {card}");
+                }
             }
             string jsonData = JsonConvert.SerializeObject(updateInfo);
             byte[] dataBytes = Encoding.UTF8.GetBytes(jsonData);
 
-            var updatePacket = new Packet
-            {
-                Command = Protocol.UpdateGameState, 
-                Data = dataBytes 
-            };
 
-            byte[] packetData = updatePacket.ToBytes();
 
             Console.WriteLine($"now central card id {centralCard.Id},{centralCard.Value}.-----{centralCard.Color}");
-            Broadcast(packetData);
-            CalculateTotalPointsWinner();
+            var packages = GetPackagesByMessage(dataBytes, UnoCommand.UPDATE_FIELD, QueryType.Response);
+
+            packages.ForEach(
+                async p => await BroadcastMessageAsync(socket, p, ctxSource.Token));
+
+           await CalculateTotalPointsWinner(socket);
 
 
 
         }
-        private void Broadcast(byte[] data)
-        {
-            foreach (var player in players)
-            {
-                try
-                {
-                    player.SendMessage(data); 
-                    Console.WriteLine($"Обновленная информация отправлена игроку {player.Nickname}.");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Ошибка при отправке обновленной информации игроку {player.Nickname}: {ex.Message}");
-                }
-            }
-        }
-
-
-
-
-
-
-
-
-
        
 
 
-        
+
+
+
+
+
+
+
+
+
+
     }
 }

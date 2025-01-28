@@ -30,7 +30,7 @@ namespace Client1
         private void NewRound()
         {
             parentForm.Show();
-            gameClient.SendMessage(Protocol.NewRound);
+            gameClient.SendMessage(UnoCommand.NEW_ROUND);
             this.Close();
         }
         private void SetPositionAndSize(Form parentForm)

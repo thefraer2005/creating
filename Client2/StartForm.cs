@@ -17,10 +17,13 @@ namespace Client2
         private Label lblErrorMessage;
 
         private string nickname;
-        public StartForm()
+        public  StartForm()
         {
+
             InitializeComponent();
             this.gameClient = new GameClient();
+            gameClient.Error += HandleGameStarted;
+
 
 
 
@@ -71,7 +74,7 @@ namespace Client2
 
         }
 
-        private void btnStartGame_Click(object sender, EventArgs e)
+        private async void btnStartGame_Click(object sender, EventArgs e)
         {
             nickname = txtNickname.Text.Trim(); // Получаем ник из текстового поля
 
@@ -82,14 +85,19 @@ namespace Client2
             }
 
             byte[] nicknameBytes = Encoding.UTF8.GetBytes(nickname); // Кодируем ник
-            gameClient.Connect("127.0.0.1");
-            gameClient.SendMessage(Protocol.Connect, nicknameBytes);
+          
+             gameClient.Connect("127.0.0.1");
+            await gameClient.SendMessage(UnoCommand.CONNECT, nicknameBytes);
 
             lblErrorMessage.Text = ""; // Очищаем сообщение об ошибке
             this.btnStartGame.Visible = false;
             this.txtNickname.Visible = false;
 
-            CreatePlayerSelectionButtons(); // Метод для создания кнопок выбора игроков
+            CreatePlayerSelectionButtons();
+
+
+
+            // Метод для создания кнопок выбора игроков
         }
 
         private void CreatePlayerSelectionButtons()
@@ -140,7 +148,28 @@ namespace Client2
             StartGame();
         }
 
-        private void StartGame()
+        private void HandleGameStarted(byte[] responseContent)
+        {
+            // Здесь вы можете проверить количество игроков в responseContent
+            int serverPlayerCount = BitConverter.ToInt32(responseContent, 0); // Предполагаем, что сервер отправляет количество игроков
+
+            if (serverPlayerCount != selectedPlayersCount)
+            {
+                MessageBox.Show("Количество игроков не совпадает. Пожалуйста, выберите снова.");
+                CreatePlayerSelectionButtons();
+            }
+            else
+            {
+                Form1 gameForm = new Form1(this, gameClient, selectedPlayersCount, nickname);
+                gameForm.Show();
+                this.Hide();
+
+            }
+
+        }
+
+
+        private async void StartGame()
         {
             try
             {
@@ -149,11 +178,13 @@ namespace Client2
                 if (selectedPlayersCount > 0)
                 {
                     byte[] data = BitConverter.GetBytes(selectedPlayersCount);
-                    gameClient.SendMessage(Protocol.StartGame, data);
+                    await gameClient.SendMessage(UnoCommand.START, data);
 
-                    Form1 gameForm = new Form1(this, gameClient, selectedPlayersCount,nickname);
-                    gameForm.Show();
-                    this.Hide();
+                   
+
+                  
+
+
                 }
 
             }
