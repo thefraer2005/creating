@@ -30,7 +30,8 @@ namespace Common
         UPDATE_FIELD=0x07,
         VICTORY=0xa7,
         SWAP = 0x34,
-        ERROR_START=0x22
+        ERROR_START=0x22,
+        END_GAME = 0x21
     }
 
     public class PackageBuilder

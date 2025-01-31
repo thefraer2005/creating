@@ -1,9 +1,5 @@
 ﻿using Common;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
 
 namespace Client2
 {
@@ -12,36 +8,35 @@ namespace Client2
         private Label lblWinner;
         private Label lblPoints;
         private int selectPLayers;
-        private Form parentForm;
         private Button btnContinue;
         private GameClient gameClient;
+        private Form parentForm;
+        private StartForm start;
+        private string nick;
         private System.Windows.Forms.Timer closeTimer;
 
-        public WinnerRound(string winnerNickname, int winnerPoints, GameClient gameClient, Form parentForm,int selectPlayer)
+        public WinnerRound(string winnerNickname, int winnerPoints, GameClient gameClient, Form parentForm, int selectPlayer, StartForm start, string nick)
         {
+            this.start = start;
+            this.nick = nick;
             this.parentForm = parentForm;
             this.gameClient = gameClient;
+
+
             this.selectPLayers = selectPlayer;
-            InitializeComponent(winnerNickname, winnerPoints, parentForm);
+            InitializeComponent(parentForm);
             parentForm.LocationChanged += (s, e) => UpdatePosition(parentForm);
-            parentForm.SizeChanged += (s, e) => UpdateSizeAndPosition(parentForm);
+            this.lblWinner.Text = $"Раунд выйграл: {Environment.NewLine}{winnerNickname}";
+            this.lblPoints.Text = $"Очки: {winnerPoints}";
         }
         private void NewRound()
         {
             parentForm.Show();
-          
+
             gameClient.SendMessage(UnoCommand.NEW_ROUND);
-            this.Close();
-        }
-        private void SetPositionAndSize(Form parentForm)
-        {
-            UpdateSizeAndPosition(parentForm); 
+            this.Hide();
         }
 
-        public void UpdateSizeAndPosition(Form parentForm)
-        {
-            
-        }
 
         public void UpdatePosition(Form parentForm)
         {
@@ -50,42 +45,67 @@ namespace Client2
                 parentForm.Location.Y + (parentForm.Height - this.Height) / 2
             );
         }
-        private void InitializeComponent(string winnerNickname, int winnerPoints, Form parentForm)
+        private void InitializeComponent(Form parentForm)
         {
-            this.Text = "Результаты раунда1";
             this.StartPosition = FormStartPosition.Manual;
-            this.FormBorderStyle = FormBorderStyle.None;
-            this.Size = new Size((int)(parentForm.Width * 0.5), (int)(parentForm.Height * 0.5));
-
-            this.StartPosition = FormStartPosition.Manual;
+            this.Size = new Size((int)(parentForm.ClientSize.Width * 0.5), (int)(parentForm.ClientSize.Height * 0.5));
             this.Location = new Point(
-                parentForm.Location.X + (parentForm.Width - this.Width) / 2,
-                parentForm.Location.Y + (parentForm.Height - this.Height) / 2
+                parentForm.Location.X + (parentForm.ClientSize.Width - this.Width) / 2,
+                parentForm.Location.Y + (parentForm.ClientSize.Height - this.Height) / 2
             );
+            this.BackColor = Color.Black;
+            this.Opacity = 0.8;
+            this.ApplyRoundedCorners(30);
 
 
-            lblWinner = new Label();
-            lblWinner.Text = $"Раунд выиграл: {winnerNickname}";
-            lblWinner.Location = new Point(30, 30);
-            lblWinner.AutoSize = true;
-            lblWinner.Font = new Font(lblWinner.Font.FontFamily, 12, FontStyle.Bold);
+            this.Resize += (s, e) => UpdateLayout();
 
-            lblPoints = new Label();
-            lblPoints.Text = $"Очки: {winnerPoints}";
-            lblPoints.Location = new Point(30, 70);
-            lblPoints.AutoSize = true;
-            lblPoints.Font = new Font(lblPoints.Font.FontFamily, 12);
 
-            btnContinue = new Button();
-            btnContinue.Text = "Продолжить";
-            btnContinue.Location = new Point(100, 120);
-            btnContinue.Click += (s, e) => NewRound();
 
-            this.Controls.Add(lblWinner);
-            this.Controls.Add(lblPoints);
-            this.Controls.Add(btnContinue);
+            this.lblWinner = new Label();
+            this.lblWinner.Font = new Font("Arial", (float)(this.ClientSize.Height * 0.07), FontStyle.Bold);
+            this.lblWinner.AutoSize = false;
+            this.lblWinner.Size = new Size((int)(this.ClientSize.Width * 0.8), (int)(parentForm.ClientSize.Height * 0.1));
+            this.lblWinner.ForeColor = Color.White;
+            this.Controls.Add(this.lblWinner);
 
-            
+            this.lblPoints = new Label();
+            this.lblPoints.Font = new Font("Arial", (float)(this.ClientSize.Height * 0.08), FontStyle.Regular);
+            this.lblPoints.AutoSize = true;
+            this.lblPoints.ForeColor = Color.White;
+
+            this.Controls.Add(this.lblPoints);
+
+            this.btnContinue = new Button();
+            this.btnContinue.Name = "btnExitGame";
+            this.btnContinue.Size = new Size((int)(this.ClientSize.Width * 0.5), (int)(this.ClientSize.Height * 0.25));
+            this.btnContinue.TabIndex = 1;
+            this.btnContinue.BackColor = Color.WhiteSmoke;
+            this.btnContinue.ForeColor = Color.Black;
+            this.btnContinue.Font = new Font("Arial", (float)(this.ClientSize.Height * 0.05), FontStyle.Regular);
+            this.btnContinue.Text = "Продолжить";
+            btnContinue.ApplyRoundedCorners(30);
+
+            this.btnContinue.Click += (sender, e) => this.NewRound();
+
+            this.Controls.Add(this.btnContinue);
+
+            this.Text = "Конец игры";
+            this.FormBorderStyle = FormBorderStyle.None;
+
+
+            UpdateLayout();
         }
+
+        private void UpdateLayout()
+        {
+
+            int padding = 10;
+            lblWinner.Location = new Point((this.ClientSize.Width - lblWinner.Width) / 2, (int)(this.ClientSize.Height * 0.3));
+            lblPoints.Location = new Point((this.ClientSize.Width - lblPoints.Width) / 2, lblWinner.Bottom + padding);
+
+            btnContinue.Location = new Point((this.ClientSize.Width - btnContinue.Width) / 2, lblPoints.Bottom + padding);
+        }
+
     }
 }

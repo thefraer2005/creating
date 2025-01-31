@@ -14,6 +14,7 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 using System.Numerics;
 using static Common.Package11207Helper;
 using System.Reflection.Metadata;
+using System.IO.Compression;
 
 namespace UnoServer
 {
@@ -31,6 +32,7 @@ namespace UnoServer
         private List<Player> players = new List<Player>();
         List<string> actions = new List<string>();
         private Socket serverSocket;
+        private Socket clientSocket;
 
         private readonly List<Socket> _clients = new();
 
@@ -58,8 +60,8 @@ namespace UnoServer
                 Console.WriteLine("Сервер запущен...");
                 do
                 {
-                    Socket clientSocket = await serverSocket.AcceptAsync();
-
+                   clientSocket = await serverSocket.AcceptAsync();
+                    _clients.Add(clientSocket);
                 
                     Player player = new Player(clientSocket);
                     players.Add(player);
@@ -68,7 +70,7 @@ namespace UnoServer
 
                     _ = Task.Run(async () => await HandleClient(player));
 
-                } while (players.Count != 0);
+                } while (true);
             }
             catch (Exception ex)
             {
@@ -92,6 +94,7 @@ namespace UnoServer
 
             try
             {
+               
                 while (player.Socket.Connected)
                 {
                     byte[] buffer = new byte[MaxPacketSize];
@@ -114,6 +117,12 @@ namespace UnoServer
                     await ProcessSocketConnect(player, content, command, player.Socket);
                 }
             }
+            catch (OutOfMemoryException ex)
+            {
+                Console.WriteLine("Недостаточно памяти при обработке данных: " + ex.Message);
+                // Логика для обработки ситуации
+                 // Прерываем цикл при ошибке
+            }
             catch (SocketException ex)
             {
                 Console.WriteLine($"Ошибка сокета: {ex.Message}");
@@ -126,9 +135,50 @@ namespace UnoServer
             {
                 Console.WriteLine($"Отключение игрока");
                 player.Socket.Close();
+                _clients.Remove(player.Socket);
                 players.Remove(player);
+                
               
             }
+        }
+        private async Task BroadcastMessageAsync(Socket socket, byte[] message, CancellationToken ctx)
+        {
+            var semaphore = new SemaphoreSlim(1);
+            var timeout = TimeSpan.FromSeconds(10000); // Установите желаемый тайм-аут
+
+            foreach (var player in players)
+            {
+                Console.WriteLine("1");
+                await semaphore.WaitAsync(ctx);
+                try
+                {
+                    using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ctx))
+                    {
+                        cts.CancelAfter(timeout); // Установите тайм-аут
+
+                        try
+                        {
+                            await player.Socket.SendAsync(message, SocketFlags.None, cts.Token);
+                        }
+                        catch (TaskCanceledException)
+                        {
+                            Console.WriteLine($"Тайм-аут при отправке сообщения игроку {player.Nickname}.");
+                            // Обработка тайм-аута, если необходимо
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Ошибка при отправке сообщения игроку {player.Nickname}: {ex.Message}");
+                            // Удалите игрока из списка или выполните другие действия
+                        }
+                    }
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            }
+
+            semaphore.Dispose();
         }
 
         private Dictionary<Socket, int> selectCountPlayers = new Dictionary<Socket, int>();
@@ -167,7 +217,8 @@ namespace UnoServer
 
                         if (selectCountPlayers.Count() == initialPlayerCount && allInitialPlayersMatch)
                         {
-                            
+                        Console.WriteLine($" {initialPlayerCount} --- {selectCountPlayers.Count()}");
+
                             await StartGame(socket);
                         }
                         
@@ -227,18 +278,21 @@ namespace UnoServer
 
                     case UnoCommand.NEW_ROUND:
                         playerInits += 1;
-                        if (playerInits == 2)
+                        if (playerInits == players.Count)
                         {
                            await  StartGame(socket);
 
                         }
                         break;
+                    
                 }
                 content.Clear();
                 
             }
             catch
             {
+                Console.WriteLine($"Now u {player.Nickname}");
+
                 socket.Disconnect(false);
             }
         }
@@ -339,13 +393,17 @@ namespace UnoServer
         }
         private async Task StartGame(Socket socket)
         {
+            selectCountPlayers.Clear();
+            initialPlayerCount = -1;
+
+            Console.WriteLine($"Central card :{centralCard}");
+
             playerInit = 0;
             playerInits = 0;
             gameStarted = true;
             deck = new Deck();
             deck.Shuffle();
             centralCard = deck.Draw();
-            Console.WriteLine($"Central card :{centralCard}");
 
             var gameStartInfo = new GameStartInfo();
 
@@ -372,26 +430,15 @@ namespace UnoServer
             Console.WriteLine(centralCard.Color);
             string jsonData = JsonConvert.SerializeObject(gameStartInfo);
             byte[] dataBytes = Encoding.UTF8.GetBytes(jsonData);
-
-            var packages = GetPackagesByMessage(dataBytes, UnoCommand.START, QueryType.Response);
-            var tasks = packages.Select(p => BroadcastMessageAsync(socket, p, ctxSource.Token)).ToArray();
-            await Task.WhenAll(tasks);
            
-        }
-        private async Task BroadcastMessageAsync(Socket socket, byte[] message,
-       CancellationToken ctx)
-        {
-            var semaphore = new SemaphoreSlim(1);
-            foreach (var player in players)
-            {
-                Console.WriteLine("1");
-                await semaphore.WaitAsync(ctx);
-                await player.Socket.SendAsync(message, SocketFlags.None, ctx);
-                semaphore.Release(1);
-            }
+            var packages = GetPackagesByMessage(dataBytes, UnoCommand.START, QueryType.Response);
+            packages.ForEach(async p => await BroadcastMessageAsync(socket, p, ctxSource.Token));
 
-            semaphore.Dispose();
+
         }
+       
+
+       
 
 
 
@@ -440,7 +487,7 @@ namespace UnoServer
                 switch (card.Type)
                 {
                     case CardType.Number:
-                        totalPoints += int.Parse(card.Value);
+                        totalPoints += (int)(byte)card.Value;
                         break;
                     case CardType.Skip:
                     case CardType.Reverse:
@@ -458,6 +505,8 @@ namespace UnoServer
 
             return totalPoints;
         }
+       
+
         private async Task CalculateTotalPointsWinner(Socket socket)
         {
             Console.WriteLine($"Starting CalculateTotalPointsWinner");
@@ -492,7 +541,7 @@ namespace UnoServer
                 bool victoryAchieved = false;
                 foreach (var player in players)
                 {
-                    if (player.Score >= 500)
+                    if (player.Score >= 30)
                     {
                         var winnerInfo = new WinnerInfo
                         {
@@ -509,8 +558,31 @@ namespace UnoServer
                         packages.ForEach(
                             async p => await BroadcastMessageAsync(socket, p, ctxSource.Token));
                         victoryAchieved = true;
+                        foreach (var playe in players)
+                        {
+                            try
+                            {
+                                if (playe.Socket.Connected)
+                                {
+                                    playe.Socket.Shutdown(SocketShutdown.Both); // Остановка сокета
+                                }
+                            }
+                            catch (SocketException ex)
+                            {
+                                Console.WriteLine($"Ошибка при закрытии сокета игрока {player.Nickname}: {ex.Message}");
+                            }
+                            finally
+                            {
+                                playe.Socket.Close(); // Закрытие сокета
+                            }
+                        }
+
+
+                        Console.WriteLine($"All players have been removed from the game--{players.Count()}.");
                         break;
                     }
+                    
+
                 }
 
                 if (!victoryAchieved)
@@ -528,6 +600,8 @@ namespace UnoServer
 
                     packages.ForEach(
                         async p => await BroadcastMessageAsync(socket, p, ctxSource.Token));
+                  
+
 
                 }
             }

@@ -1,21 +1,18 @@
 ﻿using Common;
-using Newtonsoft.Json;
-using System;
+
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading;
+
 
 
 namespace Client1
 {
     using static Package11207Helper;
-
     public class GameClient
     {
         private Socket clientSocket;
         public event Action<byte[]> OnGameStarted;
-   
+
         public event Action<byte[]> UpdateGame;
         public event Action<byte[]> onVictory;
         public event Action<byte[]> endRound;
@@ -40,11 +37,31 @@ namespace Client1
                 MessageBox.Show($"Общая ошибка: {ex.Message}");
             }
         }
+        private void DisconnectFromServer()
+        {
+            try
+            {
+                if (clientSocket.Connected)
+                {
+                   
+                    clientSocket.Shutdown(SocketShutdown.Both); 
+                }
+            }
+            catch (SocketException ex)
+            {
+                Console.WriteLine($"Ошибка при отключении: {ex.Message}");
+            }
+            finally
+            {
+               
+                clientSocket.Close(); 
+            }
 
+        }
 
         private async Task ReceiveMessages()
         {
-            while (true)
+            while (clientSocket.Connected)
             {
                 try
                 {
@@ -68,9 +85,6 @@ namespace Client1
             {
                 contentLength = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), SocketFlags.None);
                 command = GetCommand(buffer[Command]);
-
-
-
                 responseContent.AddRange(GetContent(buffer, contentLength));
 
             } while (!IsFull(buffer[Fullness]));
@@ -99,6 +113,7 @@ namespace Client1
                 case UnoCommand.VICTORY:
 
                     onVictory?.Invoke(responseContent.ToArray());
+                   
                     break;
             }
             responseContent.Clear();
@@ -117,76 +132,52 @@ namespace Client1
 
             while (!allSent)
             {
-                allSent = true; // Предполагаем, что все пакеты будут отправлены
+                allSent = true; 
 
                 foreach (var package in packages)
                 {
                     try
                     {
-                        if (clientSocket.Connected)
+                       
+                        if (clientSocket.Poll(1000, SelectMode.SelectWrite) && clientSocket.Connected)
                         {
-                            await clientSocket.SendAsync(package, SocketFlags.None);
+                            clientSocket.SendAsync(package, SocketFlags.None);
+
                         }
                         else
                         {
-                            // Соединение разорвано
-                            MessageBox.Show("Соединение разорвано. Попытка переподключения...");
-                            await Reconnect();
-
-                            // Устанавливаем флаг, чтобы повторить отправку всех пакетов
-                            allSent = false;
-                            break; // Выход из цикла foreach и повторная попытка
+                            allSent = false; 
+                            break; 
                         }
                     }
                     catch (SocketException ex)
                     {
-                        MessageBox.Show($"Ошибка при отправке сообщения: {ex.Message}");
-                        // Дополнительная обработка ошибки
-                        allSent = false; // Устанавливаем флаг для повторной попытки
-                        break; // Выход из цикла foreach
+                        MessageBox.Show($"Ошибка сокета: {ex.Message}");
+                      
+                        allSent = false;
+                        break; 
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show($"Произошла ошибка: {ex.Message}");
-                        // Дополнительная обработка ошибки
-                        allSent = false; // Устанавливаем флаг для повторной попытки
-                        break; // Выход из цикла foreach
+                        MessageBox.Show($"Ошибка: {ex.Message}");
+                        allSent = false; 
+                        break; 
                     }
                 }
             }
         }
 
-        private async Task Reconnect()
-        {
-            // Логика для повторного подключения
-            try
-            {
-                // Закрываем старый сокет, если он существует
-                if (clientSocket != null)
-                {
-                    clientSocket.Close();
-                }
+      
 
-                // Подключаемся к серверу (укажите правильный адрес)
-                // Замените на фактический IP-адрес сервера
-                await Connect("127.0.0.1");
 
-                MessageBox.Show("Подключение восстановлено.");
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Не удалось восстановить соединение: {ex.Message}");
-                // Дополнительная обработка ошибки
-            }
-        }
-
+       
         public void Disconnect()
         {
             if (clientSocket != null && clientSocket.Connected)
             {
                 clientSocket.Shutdown(SocketShutdown.Both);
                 clientSocket.Close();
-               
+
             }
 
         }

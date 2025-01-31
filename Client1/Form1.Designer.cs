@@ -1,7 +1,4 @@
-﻿using System;
-using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.IO;
+﻿
 using System.Text;
 using System.Windows.Forms;
 using Common;
@@ -25,7 +22,7 @@ namespace Client1
             set
             {
                 _image = value;
-                Invalidate(); // Перерисовать элемент управления при изменении изображения
+                Invalidate(); 
             }
         }
 
@@ -35,15 +32,40 @@ namespace Client1
             {
                 // Установим центр вращения
                 e.Graphics.TranslateTransform(Width / 2, Height / 2);
-                e.Graphics.RotateTransform(90); // Поворачиваем на 90 градусов
-                e.Graphics.TranslateTransform(-_image.Height / 2, -_image.Width / 2); // Перемещаем так, чтобы изображение было по центру
+                e.Graphics.RotateTransform(90);
+                e.Graphics.TranslateTransform(-_image.Height / 2, -_image.Width / 2); 
                 e.Graphics.DrawImage(_image, new Point(0, 0));
             }
         }
 
-        protected override Size DefaultSize => new Size(100, 150); // Установите размеры по умолчанию
+        protected override Size DefaultSize => new Size(100, 150); 
     }
+    public class RoundPanel : Panel
+    {
+        public Color CircleColor { get; set; } = Color.Transparent; 
 
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+
+          
+            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+        
+            using (Brush brush = new SolidBrush(CircleColor))
+            {
+                e.Graphics.FillEllipse(brush, 0, 0, Width, Height);
+            }
+
+        }
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            this.Invalidate(); 
+        }
+
+
+    }
     partial class Form1
     {
 
@@ -77,17 +99,26 @@ namespace Client1
         private System.Windows.Forms.Label lblFirstCard;
 
 
-        private System.Windows.Forms.Label lblWaiting;
+
+
+
+        private System.Windows.Forms.Label lblWaiting; 
+        private System.Windows.Forms.Label player1;
+        private System.Windows.Forms.Label player2;
+        private System.Windows.Forms.Label player3;
+        private System.Windows.Forms.Label player4;
         private System.Windows.Forms.PictureBox pbLoading;
 
         private System.Windows.Forms.Panel flpPlayerCards;
+
         private System.Windows.Forms.Panel flpOpponentCards;
         private System.Windows.Forms.Panel flpOpponentCards3;
         private System.Windows.Forms.Panel flpOpponentCards4;
         private System.Windows.Forms.Panel pnlCenterCard;
         private System.Windows.Forms.Panel pnlDeck;
-        private Panel pnlColorIndicator;
-        private Label currentPlayerIndicator;
+        private System.Windows.Forms.Button btnUno;
+        private RoundPanel pnlColorIndicator;
+
         private Dictionary<int, Panel> playerCardPanels = new Dictionary<int, Panel>();
         private Dictionary<int, Panel> opponentCardPanels = new Dictionary<int, Panel>();
         private Dictionary<int, Panel> opponentCardPanels3 = new Dictionary<int, Panel>();
@@ -96,188 +127,248 @@ namespace Client1
         private void InitializeComponent()
         {
 
-
+           
 
             this.lblWaiting = new System.Windows.Forms.Label();
-            this.lblWaiting.Text = "Ждем подключения...";
+            this.lblWaiting.Text = "Ждем подключения остальных...";
             this.lblWaiting.AutoSize = true;
             this.Controls.Add(lblWaiting);
+
+            this.player1 = new System.Windows.Forms.Label();
+            this.player1.Text ="";
+            this.player1.Visible = false;
+            this.player1.AutoSize = true;
+            this.player1.ForeColor = Color.Black;
+            this.player1.BackColor = Color.Transparent;
+            this.Controls.Add(player1);
+
+            this.player2 = new System.Windows.Forms.Label();
+            this.player2.Text = "";
+            this.player2.AutoSize = true;
+            this.player2.BackColor = Color.Transparent;
+            this.player2.ForeColor = Color.Black;
+            this.player2.Visible = false;
+            this.Controls.Add(player2);
+
+            this.player4 = new System.Windows.Forms.Label();
+            this.player4.Text = "";
+            this.player4.Visible = false; 
+            this.player4.ForeColor = Color.Black;
+            this.player4.BackColor = Color.Transparent;
+            this.player4.AutoSize = true;
+            this.Controls.Add(player4);
+
+            this.player3 = new System.Windows.Forms.Label();
+            this.player3.Text = "";
+            this.player3.ForeColor = Color.Black;
+            this.player3.BackColor = Color.Transparent;
+            this.player3.Visible = false;
+            this.player3.AutoSize = true;
+            this.Controls.Add(player3);
+
+
 
             this.pbLoading = new System.Windows.Forms.PictureBox();
             this.pbLoading.Image = Image.FromFile("C:/Users/ASUS/source/repos/Server/Server/img/wait.gif"); 
             this.pbLoading.SizeMode = PictureBoxSizeMode.StretchImage;
-                                                                    
-
             this.Controls.Add(pbLoading);
+        
 
             this.components = new System.ComponentModel.Container();
             this.ClientSize = new System.Drawing.Size(700, 700);
             this.StartPosition = FormStartPosition.Manual;
-            this.Location = new System.Drawing.Point(50, 50);
-            this.BackColor = Color.Khaki;
+            this.Location = new System.Drawing.Point(800, 50);
+            this.BackColor = Color.Khaki ;
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 
-            this.Text = "Form1";
+            this.Text = "Form2";
 
-           
             this.pnlCenterCard = new System.Windows.Forms.Panel();
             this.pnlCenterCard.Visible = false;
-            this.pnlCenterCard.BackColor = Color.Beige;
+            this.pnlCenterCard.BackColor = Color.Transparent;
             this.Controls.Add(this.pnlCenterCard);
 
-            this.pnlColorIndicator = new System.Windows.Forms.Panel();
-
-            this.pnlColorIndicator.Visible = false;
+            this.pnlColorIndicator = new RoundPanel();
+            this.pnlColorIndicator.Size = new Size(50, 50);
+            this.pnlColorIndicator.Visible = true;
+            this.pnlColorIndicator.BackColor = Color.Transparent;
             this.Controls.Add(this.pnlColorIndicator);
-
-
-            this.currentPlayerIndicator = new Label();
-            this.currentPlayerIndicator.Visible = false; 
-            this.Controls.Add(currentPlayerIndicator);
             this.pnlDeck = new System.Windows.Forms.Panel();
-
+            this.pnlDeck.BackColor = Color.Transparent; 
             this.pnlDeck.Visible = false;
-
-
             this.Controls.Add(this.pnlDeck);
 
+        
             this.flpPlayerCards = new System.Windows.Forms.Panel();
             this.flpPlayerCards.Name = "flpPlayerCards";
             this.flpPlayerCards.BackColor = System.Drawing.Color.Transparent;
             this.flpPlayerCards.Visible = false;
+            flpPlayerCards.ApplyRoundedCorners(20);
             this.Controls.Add(this.flpPlayerCards);
 
+            
             this.flpOpponentCards = new System.Windows.Forms.Panel();
             this.flpOpponentCards.Name = "flpOpponentCards";
             this.flpOpponentCards.Visible = false;
+            flpOpponentCards.ApplyRoundedCorners(20);
             this.flpOpponentCards.BackColor = System.Drawing.Color.Khaki;
             this.Controls.Add(this.flpOpponentCards);
 
-             this.flpOpponentCards3 = new System.Windows.Forms.Panel();
-             this.flpOpponentCards3.Name = "flpOpponentCards";
-             this.flpOpponentCards3.Visible = false;
             
-             this.flpOpponentCards3.BackColor = System.Drawing.Color.Transparent;
+            this.flpOpponentCards3 = new System.Windows.Forms.Panel();
+            this.flpOpponentCards3.Name = "flpOpponentCards";
+            flpOpponentCards3.ApplyRoundedCorners(20);
+            this.flpOpponentCards3.Visible = false;
+            this.flpOpponentCards3.BackColor = Color.Khaki;
             this.Controls.Add(this.flpOpponentCards3);
 
+            
             this.flpOpponentCards4 = new System.Windows.Forms.Panel();
-             this.flpOpponentCards4.Name = "flpOpponentCards";
+            this.flpOpponentCards4.BackColor = Color.Khaki;
+            flpOpponentCards4.ApplyRoundedCorners(20);
+            this.flpOpponentCards4.Name = "flpOpponentCards";
              this.flpOpponentCards4.Visible = false;
-             this.flpOpponentCards4.BackColor = System.Drawing.Color.Indigo;
             this.Controls.Add(this.flpOpponentCards4);
 
             this.DoubleBuffered = true;
 
 
 
-            this.currentPlayerIndicator.Visible = false;
+           
 
+           
 
-            
         }
         private async void Form1_Resize(object sender, EventArgs e)
         {
-            if (victoryForm != null && !victoryForm.IsDisposed)
+           
+            if (playerHands.Keys.Count() >= 2)
             {
-                victoryForm.UpdateSizeAndPosition(this); 
-            }
-           await UpdateCardList(playerCardPanels, playerHands[nickName], playerHands[nickName], flpPlayerCards, true, false, nickName);
+                await UpdateCardList(playerCardPanels, playerHands[nickName], playerHands[nickName], flpPlayerCards, true, false, nickName);
 
-            switch (otherPlayers.Count)
-            {
-                case 2:
-                   await  UpdateCardList(opponentCardPanels, playerHands[otherPlayers[nextIndex]], playerHands[otherPlayers[nextIndex]], flpOpponentCards, true, false, otherPlayers[nextIndex]); // Обновление списка карт противника
-                // Обновление списка карт противника
+                switch (otherPlayers.Count)
+                {
+                    case 2:
+                        await UpdateCardList(opponentCardPanels, playerHands[otherPlayers[nextIndex]], playerHands[otherPlayers[nextIndex]], flpOpponentCards, false, false, otherPlayers[nextIndex]); // Обновление списка карт противника
+                                                                                                                                                                                                      // Обновление списка карт противника
 
-                    break;
-                case 3:
-                    await UpdateCardList(opponentCardPanels3, playerHands[otherPlayers[nextIndex]], playerHands[otherPlayers[nextIndex]], flpOpponentCards3, true, true, otherPlayers[nextIndex]); // Обновление списка карт противника
+                        break;
+                    case 3:
+                        await UpdateCardList(opponentCardPanels3, playerHands[otherPlayers[nextIndex]], playerHands[otherPlayers[nextIndex]], flpOpponentCards3, false, true, otherPlayers[nextIndex]); // Обновление списка карт противника
 
-                    await UpdateCardList(opponentCardPanels4, playerHands[otherPlayers[previousIndex]], playerHands[otherPlayers[previousIndex]], flpOpponentCards4, true, true, otherPlayers[previousIndex]); // Обновление списка карт противника
+                        await UpdateCardList(opponentCardPanels4, playerHands[otherPlayers[previousIndex]], playerHands[otherPlayers[previousIndex]], flpOpponentCards4, false, true, otherPlayers[previousIndex]); // Обновление списка карт противника
 
-                    break;
-                case 4:
-                    await UpdateCardList(opponentCardPanels3, playerHands[otherPlayers[nextIndex]], playerHands[otherPlayers[nextIndex]], flpOpponentCards3, true, true, otherPlayers[nextIndex]); // Обновление списка карт противника
-                    await UpdateCardList(opponentCardPanels, playerHands[otherPlayers[nextNextIndex]], playerHands[otherPlayers[nextNextIndex]], flpOpponentCards, true, false, otherPlayers[nextNextIndex]);
-                    await UpdateCardList(opponentCardPanels4, playerHands[otherPlayers[previousIndex]], playerHands[otherPlayers[previousIndex]], flpOpponentCards4, true, true, otherPlayers[previousIndex]); // Обновление списка карт противника
+                        break;
+                    case 4:
+                        await UpdateCardList(opponentCardPanels3, playerHands[otherPlayers[nextIndex]], playerHands[otherPlayers[nextIndex]], flpOpponentCards3, false, true, otherPlayers[nextIndex]); // Обновление списка карт противника
+                        await UpdateCardList(opponentCardPanels, playerHands[otherPlayers[nextNextIndex]], playerHands[otherPlayers[nextNextIndex]], flpOpponentCards, false, false, otherPlayers[nextNextIndex]);
+                        await UpdateCardList(opponentCardPanels4, playerHands[otherPlayers[previousIndex]], playerHands[otherPlayers[previousIndex]], flpOpponentCards4, false, true, otherPlayers[previousIndex]); // Обновление списка карт противника
 
-                    break;
+                        break;
+                }
             }
 
             AdjustLayout();
         }
 
+
         private void AdjustLayout()
         {
             int formWidth = this.ClientSize.Width;
             int formHeight = this.ClientSize.Height;
-
-            currentPlayerIndicator.Size = new Size((int)(formWidth * 0.04), (int)(formHeight * 0.04));
+            if (this.Controls.Contains(btnUno))
+            {
+               
+                btnUno.Size = new Size((int)(formWidth * 0.2), (int)(formHeight * 0.1));
+                btnUno.Location = new Point((int)(formWidth * 0.51), (int)(formHeight * 0.42));
+            }
 
             pnlColorIndicator.Size = new Size((int)(formWidth * 0.05), (int)(formWidth * 0.05));
-            pnlColorIndicator.Location = new Point((int)(this.ClientSize.Width * 0.67), (int)(this.ClientSize.Height * 0.55));
+            pnlColorIndicator.Location = new Point((int)(this.ClientSize.Width * 0.53), (int)(this.ClientSize.Height * 0.525));
+
+            flpPlayerCards.Size = new Size((int)(formWidth * 0.5), (int)(formHeight * 0.2));
+            flpPlayerCards.Location = new Point((int)(formWidth * 0.25), (int)(formHeight * 0.8));
+
+           
+            player1.Location = new Point((int)(formWidth * 0.25), (int)(formHeight * 0.76));
+            player1.Font = new Font("Arial", formHeight * 0.02f, FontStyle.Bold);
 
 
-            lblWaiting.Location = new Point((int)(formWidth * 0.35), (int)(formHeight * 0.35));
-            int fontSize = Math.Min((int)(this.Height * 0.03), (int)(this.Width * 0.03));
+
+            flpOpponentCards.Size = new Size((int)(formWidth * 0.5), (int)(formHeight * 0.2));
+            flpOpponentCards.Location = new Point((int)(formWidth * 0.25), (int)(formHeight * 0));
+
+            
+            player2.Location = new Point((int)(formWidth * 0.25), (int)(formHeight * 0.2));
+            player2.Font = new Font("Arial", formHeight * 0.02f, FontStyle.Bold);
+
+            flpOpponentCards3.Size = new Size((int)(formWidth * 0.2), (int)(formHeight * 0.5));
+            flpOpponentCards3.Location = new Point((int)(formWidth * 0.8), (int)(formHeight * 0.25));
+
+            
+            player3.Location = new Point((int)(formWidth * 0.8), (int)(formHeight * 0.22));
+            player3.Font = new Font("Arial", formHeight * 0.02f, FontStyle.Bold);
+
+
+            flpOpponentCards4.Size = new Size((int)(formWidth * 0.2), (int)(formHeight * 0.5));
+            flpOpponentCards4.Location = new Point((int)(formWidth * 0), (int)(formHeight * 0.25));
+            
+            player4.Location = new Point((int)(formWidth * 0), (int)(formHeight * 0.22));
+            player4.Font = new Font("Arial", formHeight * 0.02f, FontStyle.Bold);
+
+            lblWaiting.Location = new Point((int)(formWidth * 0.25), (int)(formHeight * 0.3));
+            int fontSize = Math.Min((int)(this.Height * 0.025), (int)(this.Width * 0.025));
             lblWaiting.Font = new Font("Arial", fontSize, FontStyle.Bold);
 
-            pbLoading.Location = new Point((int)(formWidth * 0.4), (int)(formHeight * 0.4));
-            pbLoading.Size = new Size((int)(formWidth * 0.2), (int)(formHeight * 0.2));
-
-            flpPlayerCards.Size = new Size((int)(formWidth * 0.45), (int)(formHeight * 0.225));
-            flpPlayerCards.Location = new Point((int)(formWidth * 0.225), (int)(formHeight * 0.725)); 
-
-            flpOpponentCards.Size = new Size((int)(formWidth * 0.45), (int)(formHeight * 0.225));
-            flpOpponentCards.Location = new Point((int)(formWidth * 0.225), (int)(formHeight * 0.05));
-
-
-
-
-            flpOpponentCards3.Size = new Size((int)(formWidth * 0.225), (int)(formHeight * 0.45));
-            flpOpponentCards3.Location = new Point((int)(formWidth * 0.725), (int)(formHeight * 0.225));
-
-            flpOpponentCards4.Size = new Size((int)(formWidth * 0.225), (int)(formHeight * 0.45));
-            flpOpponentCards4.Location = new Point((int)(formWidth * 0.05), (int)(formHeight * 0.225));
+            pbLoading.Location = new Point((int)(formWidth * 0.3), (int)(formHeight * 0.35));
+            pbLoading.Size = new Size((int)(formWidth * 0.3), (int)(formHeight * 0.3));
             
-            pnlDeck.Size = new Size((int)(formWidth * 0.15), (int)(formHeight * 0.225));
-            pnlDeck.Location = new Point((int)(formWidth * 0.3), (int)(formHeight * 0.4)); 
+            pnlDeck.Size = new Size((int)(formWidth * 0.1), (int)(formHeight * 0.15));
+            pnlDeck.Location = new Point((int)(formWidth * 0.29), (int)(formHeight * 0.425)); 
 
 
 
-            pnlCenterCard.Size = new Size((int)(formWidth * 0.15), (int)(formHeight * 0.225));
-            pnlCenterCard.Location = new Point((int)(formWidth * 0.47), (int)(formHeight * 0.4));
-
+            pnlCenterCard.Size = new Size((int)(formWidth * 0.1), (int)(formHeight * 0.15));
+            pnlCenterCard.Location = new Point((int)(formWidth * 0.4), (int)(formHeight * 0.425));
+            flpPlayerCards.ApplyRoundedCorners(20); 
+            flpOpponentCards.ApplyRoundedCorners(20);
+            flpOpponentCards3.ApplyRoundedCorners(20);
+            flpOpponentCards4.ApplyRoundedCorners(20);
             UpdateCardSizes();
 
-            UpdateCurrentPlayerIndicator(currentPlayer);
+          
         }
 
         private void UpdateCurrentPlayerIndicator(string currentTurnNickname)
         {
-           
-            int formWidth = this.ClientSize.Width;
-            int formHeight = this.ClientSize.Height;
+            Panel currentPanel = playerPanels[currentTurnNickname];
+            foreach (var panel in playerPanels.Values)
+            {
 
-            if (currentTurnNickname == nickName)
-            {
-                currentPlayerIndicator.Location = new Point(flpPlayerCards.Location.X + flpPlayerCards.Width + 10,
-                    flpPlayerCards.Location.Y + (flpPlayerCards.Height / 2) - (currentPlayerIndicator.Height / 2));
-                currentPlayerIndicator.Visible = true; 
+                if(panel== currentPanel)
+                {
+                    panel.BackColor = Color.Brown ;
+
+                }
+                else { panel.BackColor = Color.Khaki; }
+                
+               
+
+                panel.Invalidate();
             }
-            else
-            {
-                currentPlayerIndicator.Location = new Point(flpOpponentCards.Location.X + flpOpponentCards.Width + 10,
-                    flpOpponentCards.Location.Y + (flpOpponentCards.Height / 2) - (currentPlayerIndicator.Height / 2));
-                currentPlayerIndicator.Visible = true;
-            }
+
         }
+
+
+      
+
+
 
 
         private void UpdateCardSizes()
         {
-            int cardWidth = (int)(this.ClientSize.Width * 0.15); 
-            int cardHeight = (int)(this.ClientSize.Height * 0.225); 
+            int cardWidth = (int)(this.ClientSize.Width * 0.10); 
+            int cardHeight = (int)(this.ClientSize.Height * 0.15); 
 
 
             if (pnlDeck.Controls.Count > 0)
@@ -333,17 +424,17 @@ namespace Client1
         {
             using (Image originalImage = Image.FromFile(imagePath))
             {
-                // Создаем новое изображение с размерами, соответствующими повёрнутому изображению
+               
                 Bitmap rotatedImage = new Bitmap(originalImage.Height, originalImage.Width);
 
                 using (Graphics g = Graphics.FromImage(rotatedImage))
                 {
-                    // Устанавливаем точку вращения и угол поворота
+                  
                     g.TranslateTransform(rotatedImage.Width / 2, rotatedImage.Height / 2);
                     g.RotateTransform(90);
                     g.TranslateTransform(-originalImage.Width / 2, -originalImage.Height / 2);
 
-                    // Рисуем оригинальное изображение
+                 
                     g.DrawImage(originalImage, new Point(0, 0));
                 }
 
@@ -351,53 +442,54 @@ namespace Client1
             }
         }
 
-        private Panel DrawCard(Card card, bool isPlayerCard, bool firstCard, bool main, bool many)
+        private async  Task<Panel> DrawCard(Card card, bool isPlayerCard, bool firstCard, bool main, bool many)
         {
           
 
 
-            int cardWidth = (int)(this.ClientSize.Width * 0.15);
-            int cardHeight = (int)(this.ClientSize.Height * 0.225);
+            int cardWidth = (int)(this.ClientSize.Width * 0.1);
+            int cardHeight = (int)(this.ClientSize.Height * 0.15);
 
             Panel cardPanel = new Panel
             {
                 Size = new Size(cardWidth, cardHeight),
-                BackColor = Color.LightBlue
+               
             };
 
-            string imagePath = isPlayerCard ? GetImagePath(card) : GetFaceDownImagePath();
-            if (main)
+            string imagePath = isPlayerCard ? await GetImagePath(card) : await MinioHelper.GetImageUrl("unobucket", "ggg1.png", 600);
+            CardPictureBox pictureBox = new CardPictureBox();
+
+            using (HttpClient client = new HttpClient())
             {
-                imagePath = GetFaceDownImagePath();
+               
+                if (Uri.IsWellFormedUriString(imagePath, UriKind.Absolute))
+                {
+                    
+                    var response = await client.GetAsync(imagePath);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        using (var stream = await response.Content.ReadAsStreamAsync())
+                        {
+                            pictureBox.Image = Image.FromStream(stream);
+                        }
+                    }
+                    
+                }
+               
             }
-            CardPictureBox pictureBox = new CardPictureBox
-            {
-                Image = Image.FromFile(imagePath),
-                SizeMode = PictureBoxSizeMode.StretchImage,
-                Dock = DockStyle.Fill,
-                CardId = card.Id // Устанавливаем ID карты
-            };
+
+            
+            pictureBox.SizeMode = PictureBoxSizeMode.StretchImage;
+            pictureBox.Dock = DockStyle.Fill;
+            pictureBox.CardId = card.Id; 
+
+           
             if (many)
             {
                 cardPanel.Size = new Size(cardHeight, cardWidth);
-                pictureBox.Image.RotateFlip(RotateFlipType.Rotate90FlipNone); // Поворачиваем изображение на 90 градусов
+                pictureBox.Image.RotateFlip(RotateFlipType.Rotate90FlipNone); 
             }
-            /*if (many) // Замените someCondition на ваше условие
-            {
-                // Изменяем размеры панели
-                cardPanel.Size = new Size(cardHeight, cardWidth);
-                Image rotatedImage = RotateImage(imagePath);
 
-                pictureBox = new CardPictureBox
-                {
-                    Image = rotatedImage,
-                    SizeMode = PictureBoxSizeMode.StretchImage,
-                    Dock = DockStyle.Fill,
-                     CardId = card.Id
-                };
-
-                // Замените newWidth и newHeight на нужные значения
-            }*/
 
             cardPanel.Controls.Add(pictureBox);
 
@@ -411,7 +503,8 @@ namespace Client1
                     }
                     else
                     {
-                        MessageBox.Show("не твой хлд!");
+                       
+                        ShowErrorDialog("Сейчас не ваш ход.");
                     }
                 };
                 pnlDeck.Controls.Add(cardPanel);
@@ -422,12 +515,7 @@ namespace Client1
                 {
                     pnlCenterCard.Controls.Add(cardPanel);
                 }
-                else
-                {
-                   
-                   
-                   
-                }
+                
             }
 
             return cardPanel;
@@ -444,7 +532,7 @@ namespace Client1
         {
             if (selectedColor != null)
             {
-                card.Color = selectedColor.ToString();
+                card.Color = selectedColor.Value;
             }
            
 
@@ -488,7 +576,7 @@ namespace Client1
                 return true;
             }
            
-            // Проверка на соответствие по цвету или значению
+           
             return card.Color == centralCard.Color || card.Value == centralCard.Value;
         }
         private bool IsValidСoloda(List<Card> playerCards, Card centralCard)
@@ -513,41 +601,41 @@ namespace Client1
             }
             else
             {
-                MessageBox.Show("У вас есть подходящие карты");
+               
+                ShowErrorDialog("У вас есть подходящие карты.");
             }
         }
 
 
-        private string GetFaceDownImagePath()
+       
+
+
+
+        private async Task<string?> GetImagePath(Card card)
         {
-            return Path.Combine("C:/Users/ASUS/source/repos/Server/Server", "img", "ggg1.png");
-        }
+           
+           
+            string colorName = card.Color.ToString();
 
-
-
-        private string GetImagePath(Card card)
-        {
-            //string baseImagePath = Path.Combine("C:/Users/ASUS/source/repos/Server/Server", "img");
-            string baseImagePath = Path.Combine("..", "Server", "img");
-
+          
             string imageFileName;
 
             switch (card.Type)
             {
                 case CardType.Number:
-                    imageFileName = $"{card.Color}- {card.Value}.png";
+                    imageFileName = $"{colorName}- {(byte)card.Value}.png";
                     break;
 
                 case CardType.Skip:
-                    imageFileName = $"{card.Color} Skip- 1.png";
+                    imageFileName = $"{colorName} Skip- 1.png";
                     break;
 
                 case CardType.Reverse:
-                    imageFileName = $"{card.Color} Reverse- 1.png";
+                    imageFileName = $"{colorName} Reverse- 1.png";
                     break;
 
                 case CardType.DrawTwo:
-                    imageFileName = $"{card.Color} Draw2- 1.png";
+                    imageFileName = $"{colorName} Draw2- 1.png";
                     break;
 
                 case CardType.Wild:
@@ -559,11 +647,12 @@ namespace Client1
                     break;
 
                 default:
-                    imageFileName = "Draw4- 1.png";
-                    break;
+                    throw new ArgumentException("Неизвестный тип карты");
             }
+            string? resultImageFileName = await MinioHelper.GetImageUrl("unobucket", imageFileName, 600);
 
-            return Path.Combine(baseImagePath, imageFileName);
+            
+            return resultImageFileName;
         }
 
 

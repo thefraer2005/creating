@@ -8,8 +8,8 @@ namespace Common
 {
     public static class Package11207Helper
     {
-        public const int MaxSizeOfContent = 244;
-        public const int MaxPacketSize = 256;
+        public const int MaxSizeOfContent = 1000;
+        public const int MaxPacketSize = 1012;
         public const int MaxFreeBytes = MaxPacketSize - MaxSizeOfContent;
 
 
@@ -123,8 +123,8 @@ namespace Common
                        .WithContent(resultContent)
                        .Build());
             }
-               
-            
+
+            Console.WriteLine("2");
             return packages;
         }
 

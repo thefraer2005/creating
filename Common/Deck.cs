@@ -25,53 +25,51 @@ namespace Common
         private void InitializeDeck()
         {
 
-            var colors = new[] { "Red"};
+            var colors = new[] { CardColor.Red };
             int cardId = 1;
             Random random = new Random();
 
             foreach (var color in colors)
             {
 
-                Cards.Add(new Card(cardId++, color, "0"));
+                Cards.Add(new Card(cardId++, color, CardValue.Zero));
 
-
+                // Добавляем карты с значениями от 1 до 9
                 for (int i = 1; i <= 9; i++)
                 {
-                    Cards.Add(new Card(cardId++, color, i.ToString()));
-                    Cards.Add(new Card(cardId++, color, null, CardType.DrawTwo));
-                      Cards.Add(new Card(cardId++, color, i.ToString()));
+                    Cards.Add(new Card(cardId++, color, (CardValue)i)); // Используем перечисление CardValue
+                    Cards.Add(new Card(cardId++, color, (CardValue)i)); // Используем перечисление CardValue
+                    // Используем перечисление CardValue
+                    // Cards.Add(new Card(cardId++, color, null, CardType.DrawTwo)); // Добавляем карты DrawTwo
                 }
-
-             /* Cards.Add(new Card(cardId++, color, null, CardType.Skip));
-                Cards.Add(new Card(cardId++, color, null, CardType.Skip));
-                Cards.Add(new Card(cardId++, color, null, CardType.Reverse));
-                Cards.Add(new Card(cardId++, color, null, CardType.Reverse));
-               
-                Cards.Add(new Card(cardId++, color, null, CardType.DrawTwo));*/
-               
+               /* Cards.Add(new Card(cardId++, color, CardValue.Skip, CardType.Skip));
+                Cards.Add(new Card(cardId++, color, CardValue.Skip, CardType.Skip));
+                Cards.Add(new Card(cardId++, color, CardValue.Reverse, CardType.Reverse));
+                Cards.Add(new Card(cardId++, color, CardValue.Reverse, CardType.Reverse));
+                Cards.Add(new Card(cardId++, color, CardValue.DrawTwo, CardType.DrawTwo));
+               */
             }
 
-            
-            /*for (int i = 0; i < 4; i++)
+
+           /*for (int i = 0; i < 8; i++)
             {
-                string randomColor = colors[random.Next(colors.Length)]; // Выбор случайного цвета
-                Cards.Add(new Card(cardId++, randomColor, null, CardType.Wild));
+                CardColor randomColor = colors[random.Next(colors.Length)]; // Выбор случайного цвета
+                Cards.Add(new Card(cardId++, randomColor, CardValue.Wild, CardType.Wild)); // Используем значение Wild
             }
-            
-            for (int i = 0; i < 80; i++)
+
+            for (int i = 0; i < 8; i++)
             {
-                string randomColor = colors[random.Next(colors.Length)]; // Выбор случайного цвета
-                Cards.Add(new Card(cardId++, randomColor, null, CardType.WildDrawFour));
+                CardColor randomColor = colors[random.Next(colors.Length)]; // Выбор случайного цвета
+                Cards.Add(new Card(cardId++, randomColor, CardValue.WildDrawFour, CardType.WildDrawFour)); // Используем значение WildDrawFour
             }*/
+
+
+
+
         }
 
 
-
-
-
-
-
-        public void Shuffle()
+            public void Shuffle()
         {
             Random rng = new Random();
             int n = Cards.Count;
